@@ -787,10 +787,8 @@ suzySetButtonData:			;@ r0=buttons & switches, r12=suzptr.
 	bx lr
 
 ;@----------------------------------------------------------------------------
-suzPaintSprites:			;@ Out r0=cycles used
-	.type	suzPaintSprites STT_FUNC
+suzPaintSprites:			;@ Out r0=cycles used, r12=suzyptr
 ;@----------------------------------------------------------------------------
-	ldr suzptr,=suzy_0
 	ldrh r0,[suzptr,#suzSuzyBusEn]
 	and r0,r0,r0,lsr#8
 	ands r0,r0,#1					;@ Is BusEnable & SprGo set?
