@@ -1,5 +1,5 @@
 //
-//  ARMSuzy.h
+//  ARMSuzy.s
 //  Atari Lynx Suzy emulation for ARM32.
 //
 //  Created by Fredrik Ahlström on 2024-09-22.
@@ -40,32 +40,6 @@
 ;@----------------------------------------------------------------------------
 suzyInit:					;@ Only need to be called once
 ;@----------------------------------------------------------------------------
-	mov r1,#0xffffff00			;@ Build chr decode tbl
-	ldr r3,=CHR_DECODE			;@ 0x200
-chrLutLoop:
-	and r0,r1,#0x03
-	and r2,r1,#0x0C
-	orr r0,r0,r2,lsl#2
-	and r2,r1,#0x30
-	orr r0,r0,r2,lsl#4
-	and r2,r1,#0xC0
-	orr r0,r0,r2,lsl#6
-	strh r0,[r3],#2
-	adds r1,r1,#1
-	bne chrLutLoop
-
-;@----------------------------------------------------------------------------
-makeTileBgr:
-;@----------------------------------------------------------------------------
-	mov r1,#BG_GFX
-	mov r0,#0
-	mov r2,#32*22
-bgrLoop:
-	strh r0,[r1],#2
-	add r0,r0,#1
-	subs r2,r2,#1
-	bne bgrLoop
-
 	bx lr
 ;@----------------------------------------------------------------------------
 suzyReset:					;@ r0=ram, r12=suzptr
@@ -142,7 +116,7 @@ suzySaveState:				;@ In r0=destination, r1=suzptr. Out r0=state size.
 suzyLoadState:				;@ In r0=suzptr, r1=source. Out r0=state size.
 	.type	suzyLoadState STT_FUNC
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{r4,r5,r10,lr}
+	stmfd sp!,{r4,r5,lr}
 	mov r5,r0					;@ Store suzptr (r0)
 	mov r4,r1					;@ Store source
 
@@ -150,17 +124,13 @@ suzyLoadState:				;@ In r0=suzptr, r1=source. Out r0=state size.
 	mov r2,#suzyStateEnd-suzyState
 	bl memCopy
 
-	bl clearDirtyTiles
-
-	ldmfd sp!,{r4,r5,r10,lr}
+	ldmfd sp!,{r4,r5,lr}
 ;@----------------------------------------------------------------------------
 suzyGetStateSize:			;@ Out r0=state size.
 	.type	suzyGetStateSize STT_FUNC
 ;@----------------------------------------------------------------------------
 	mov r0,#suzyStateEnd-suzyState
 	bx lr
-
-	.pool
 
 ;@----------------------------------------------------------------------------
 suzyRead:					;@ I/O read (0xFC00-0xFCC5)
@@ -350,6 +320,8 @@ io_read_tbl:
 	.long suRegR				;@ 0xFCB1 SWITCHES
 	.long cartPeek				;@ 0xFCB2 RCART0
 	.long cartPeek				;@ 0xFCB3 RCART1
+//	.long lnxCartRead			;@ 0xFCB2 RCART0
+//	.long lnxCartRead			;@ 0xFCB3 RCART1
 	.long suUnmappedR			;@ 0xFCB4
 	.long suUnmappedR			;@ 0xFCB5
 	.long suUnmappedR			;@ 0xFCB6
@@ -396,7 +368,6 @@ suRegR:
 	add r2,suzptr,#suzRegs
 	ldrb r0,[r2,r0]
 	bx lr
-	.pool
 ;@----------------------------------------------------------------------------
 suHRevR:					;@ Suzy HW Revision (0xFC88)
 ;@----------------------------------------------------------------------------
@@ -414,9 +385,9 @@ suSprSysR:					;@ Sprite Sys (0xFC92)
 ;@----------------------------------------------------------------------------
 suJoystickR:				;@ Suzy Joystick (0xFCB0)
 ;@----------------------------------------------------------------------------
-	ldrb r0,[suzptr,#suzSprSys]
-	tst r0,#0x08				;@ LeftHand
+	ldrb r1,[suzptr,#suzSprSys]
 	ldrb r0,[suzptr,#suzJoystick]
+	tst r1,#0x08				;@ LeftHand
 	bxne lr
 	adr r1,joyFlipTbl
 	and r2,r0,#0xF				;@ Keep buttons
@@ -614,6 +585,8 @@ io_write_tbl:
 	.long suReadOnlyW			;@ 0xFCB1 SWITCHES
 	.long cartPoke				;@ 0xFCB2 RCART0
 	.long cartPoke				;@ 0xFCB3 RCART1
+//	.long lnxCartWrite			;@ 0xFCB2 RCART0
+//	.long lnxCartWrite			;@ 0xFCB3 RCART1
 	.long suUnmappedW			;@ 0xFCB4
 	.long suUnmappedW			;@ 0xFCB5
 	.long suUnmappedW			;@ 0xFCB6
@@ -1479,20 +1452,5 @@ suzTestCollision:			;@ In r4=hoff. Out r0=collision
 	bx lr
 
 ;@----------------------------------------------------------------------------
-#ifdef GBA
-	.section .iwram, "ax", %progbits	;@ For the GBA
-	.align 2
-#endif
-;@----------------------------------------------------------------------------
-#ifdef GBA
-	.section .sbss				;@ For the GBA
-#else
-	.section .bss
-#endif
-	.align 2
-CHR_DECODE:
-	.space 0x200
-SCROLL_BUFF:
-	.space 160*4
 
 #endif // #ifdef __arm__

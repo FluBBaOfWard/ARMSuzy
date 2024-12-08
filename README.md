@@ -1,3 +1,3 @@
-# ARMSuzy V0.0.2
+# ARMSuzy V0.1.0
 
-Atari Lynx Suzy video chip emulator for GBA/NDS.
+Atari Lynx Suzy sprite-blitter chip emulator for ARM32.
