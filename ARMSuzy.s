@@ -96,7 +96,7 @@ memCopy:
 thumbCallR3:
 ;@----------------------------------------------------------------------------
 	bx r3
-
+	.pool
 ;@----------------------------------------------------------------------------
 suzySaveState:				;@ In r0=destination, r1=suzptr. Out r0=state size.
 	.type	suzySaveState STT_FUNC
@@ -548,7 +548,7 @@ io_write_tbl:
 	.long suUnmappedW			;@ 0xFC8E
 	.long suUnmappedW			;@ 0xFC8F
 	.long suBusEnW				;@ 0xFC90 SUZYBUSEN
-	.long suRegW				;@ 0xFC91 SPRGO
+	.long suSprGoW				;@ 0xFC91 SPRGO
 	.long suSprSysW				;@ 0xFC92 SPRSYS
 	.long suUnmappedW			;@ 0xFC93
 	.long suUnmappedW			;@ 0xFC94
@@ -738,6 +738,14 @@ suBusEnW:					;@ Suzy Bus Enable (0xFC90)
 ;@----------------------------------------------------------------------------
 	and r1,r1,#0x01
 	strb r1,[suzptr,#suzSuzyBusEn]
+	bx lr
+;@----------------------------------------------------------------------------
+suSprGoW:					;@ Sprite Process Start Bit (0xFC91)
+;@----------------------------------------------------------------------------
+	strb r1,[suzptr,#suzSprGo]
+	ldrb r0,[suzptr,#suzSprSys]
+	bic r0,r0,#0x02					;@ Clear Stop on Current.
+	strb r0,[suzptr,#suzSprSys]
 	bx lr
 ;@----------------------------------------------------------------------------
 suSprSysW:					;@ Sprite Sys (0xFC92)
