@@ -1076,6 +1076,12 @@ checkVBail:
 //	cmppl r1,#0
 //	bpl breakV2Loop
 	b keepRendering
+
+#ifdef NDS
+	.section .itcm						;@ For the NDS ARM9
+#elif GBA
+	.section .iwram, "ax", %progbits	;@ For the GBA
+#endif
 ;@----------------------------------------------------------------------------
 suzLineRender:				;@ In r10=hSign, r1=hQuadOff, r2=vOff.
 ;@----------------------------------------------------------------------------
