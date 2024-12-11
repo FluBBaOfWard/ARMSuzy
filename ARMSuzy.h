@@ -143,7 +143,12 @@ typedef struct {
 	u8 sprCtl0_PixelBits;
 	u8 lineType;
 	u8 linePixel;
-	u8 padding2[2];
+	u8 everOnScreen;
+	u8 sprSys_Busy;
+	u8 sprSys_UnsafeAccess;
+	u8 sprSys_Mathbit;
+	u8 sprSys_MathInProgress;
+	u8 padding2[1];
 
 	// Line rendering related variables
 	u32 lineRepeatCount;
@@ -156,23 +161,16 @@ typedef struct {
 	int mathAB_sign;
 	int mathCD_sign;
 
-	int sprSys_Busy;
-	int sprSys_UnsafeAccess;
-	int sprSys_Mathbit;
-	int sprSys_MathInProgress;
-	int everOnScreen;
-
 	void (*sprTypeFunc)(void);
 	u32 lineBaseAddress;
 	u32 lineCollisionAddress;
-	u32 cyclesUsed;				// Cycles used to paint sprites.
 
 	u8 dirtyTiles[4];
 	u8 *suzyRAM;
 
 } SUZY;
 
-void suzyReset(void *irqFunction(), void *ram, int soc);
+void suzyReset(void *ram, int soc);
 
 /**
  * Saves the state of the chip to the destination.

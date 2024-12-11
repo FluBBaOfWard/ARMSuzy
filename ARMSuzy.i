@@ -155,7 +155,12 @@ wsvLatchedDispCtrl:	.byte 0		;@ Latched Display Control
 suzSprCtl0_PixelBits:	.byte 0
 suzLineType:		.byte 0	;@
 suzLinePixel:		.byte 0	;@
-suzPadding2:		.skip 2
+everOnScreen:		.byte 0
+sprSys_Busy:		.byte 0
+sprSys_UnsafeAccess:	.byte 0
+sprSys_Mathbit:		.byte 0
+sprSys_MathInProgress:	.byte 0
+suzPadding2:		.skip 1
 
 suzLineRepeatCount:	.long 0	;@
 suzLinePacketBitsLeft:	.long 0	;@
@@ -167,16 +172,9 @@ suzPenIndex:		.space 16	;@
 mathAB_sign:		.long 0
 mathCD_sign:		.long 0
 
-sprSys_Busy:		.long 0
-sprSys_UnsafeAccess:	.long 0
-sprSys_Mathbit:		.long 0
-sprSys_MathInProgress:	.long 0
-everOnScreen:		.long 0
-
 suzSprTypeFunc:		.long 0
 suzLineBaseAddress:	.long 0		;@ Current dest line adr.
 suzLineCollisionAddress:	.long 0		;@ Current collision dest line adr.
-suzyCyclesUsed:		.long 0		;@ Cycles used to paint sprites.
 suzyStateEnd:
 
 dirtyTiles:			.space 4

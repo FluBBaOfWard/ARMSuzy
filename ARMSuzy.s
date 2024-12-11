@@ -353,18 +353,17 @@ suUnmappedR:
 ;@----------------------------------------------------------------------------
 suUnknownR:
 ;@----------------------------------------------------------------------------
-	ldr r2,=0x826EBAD0
+	ldr r1,=0x826EBAD0
 ;@----------------------------------------------------------------------------
 suImportantR:
 	mov r11,r11					;@ No$GBA breakpoint
-	stmfd sp!,{r0,suzptr,lr}
+	stmfd sp!,{r2,suzptr,lr}
 	bl _debugIOUnimplR
-	ldmfd sp!,{r0,suzptr,lr}
+	ldmfd sp!,{r2,suzptr,lr}
 ;@----------------------------------------------------------------------------
 suRegR:
-	and r0,r0,#0xFF
-	add r2,suzptr,#suzRegs
-	ldrb r0,[r2,r0]
+	add r2,r2,#suzRegs
+	ldrb r0,[suzptr,r2]
 	bx lr
 ;@----------------------------------------------------------------------------
 suHRevR:					;@ Suzy HW Revision (0xFC88)
@@ -606,11 +605,9 @@ suUnknownW:
 ;@----------------------------------------------------------------------------
 suImportantW:
 ;@----------------------------------------------------------------------------
-	and r0,r0,#0xFF
-	add r2,suzptr,#suzRegs
-	strb r1,[r2,r0]
-	ldr r2,=debugIOUnimplW
-	bx r2
+	add r2,r2,#suzRegs
+	strb r1,[suzptr,r2]
+	b debugIOUnimplW
 ;@----------------------------------------------------------------------------
 suReadOnlyW:
 ;@----------------------------------------------------------------------------
@@ -619,16 +616,14 @@ suUnmappedW:
 	b _debugIOUnmappedW
 ;@----------------------------------------------------------------------------
 suRegW:
-	and r0,r0,#0xFF
-	add r2,suzptr,#suzRegs
-	strb r1,[r2,r0]
+	add r2,r2,#suzRegs
+	strb r1,[suzptr,r2]
 	bx lr
 ;@----------------------------------------------------------------------------
 suRegLW:
-	and r0,r0,#0xFE
 	and r1,r1,#0xFF
-	add r2,suzptr,#suzRegs
-	strh r1,[r2,r0]
+	add r2,r2,#suzRegs
+	strh r1,[suzptr,r2]
 	bx lr
 
 ;@----------------------------------------------------------------------------
@@ -675,7 +670,7 @@ noSignedAB:
 ;@ suzDoMultiply:			;@
 ;@----------------------------------------------------------------------------
 	mov r1,#0
-	str r1,[suzptr,#sprSys_Mathbit]
+	strb r1,[suzptr,#sprSys_Mathbit]
 	ldrh r0,[suzptr,#suzMathAB]
 	ldrh r1,[suzptr,#suzMathCD]
 	mul r3,r1,r0
@@ -706,7 +701,7 @@ suMathEW:					;@ Math E Register (0xFC63)
 	cmp r1,#0
 	mov r2,#0
 	moveq r2,#1
-	str r2,[suzptr,#sprSys_Mathbit]
+	strb r2,[suzptr,#sprSys_Mathbit]
 	moveq r0,#-1
 	beq zeroDvide
 	ldr r0,[suzptr,#suzMathEFGH]
@@ -773,10 +768,10 @@ suzPaintSprites:			;@ Out r0=cycles used, r12=suzyptr
 
 	stmfd sp!,{r4-r6,r9,lr}
 	mov r9,#0						;@ CyclesUsed
-	str r9,[suzptr,#everOnScreen]
-	mov r4,#0
+	strb r9,[suzptr,#everOnScreen]
+	mov r4,#0						;@ Sprite count
 	mov r0,#1
-	str r0,[suzptr,#sprSys_Busy]
+	strb r0,[suzptr,#sprSys_Busy]
 spriteLoop:
 	ldrb r0,[suzptr,#suzSCBNextH]
 	cmp r0,#0
@@ -817,7 +812,7 @@ noSprCollWrite:
 	add r0,r0,r1
 	mov r0,r0,lsl#16
 	ldrb r1,[r2,r0,lsr#16]
-	ldr r3,[suzptr,#everOnScreen]
+	ldrb r3,[suzptr,#everOnScreen]
 	cmp r3,#0
 	orreq r1,r1,#0x80
 	bicne r1,r1,#0x80
@@ -834,7 +829,7 @@ skipSprite:
 
 exitPaintSprite:
 	mov r0,#0
-	str r0,[suzptr,#sprSys_Busy]
+	strb r0,[suzptr,#sprSys_Busy]
 	ldrb r0,[suzptr,#suzSprGo]
 	bic r0,r0,#1
 	strb r0,[suzptr,#suzSprGo]
@@ -1168,7 +1163,7 @@ checkBail:
 	beq continueRend
 exitRender:
 	ands r7,r7,#1				;@ onScreen
-	strne r7,[suzptr,#everOnScreen]
+	strbne r7,[suzptr,#everOnScreen]
 	ldmfd sp!,{r4-r8,r10,r11,lr}
 	bx lr
 
