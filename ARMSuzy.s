@@ -1117,13 +1117,13 @@ suzRenderLine:				;@ In r10=hSign, r1=hQuadOff.
 ;@----------------------------------------------------------------------------
 
 	;@ Work out the horizontal pixel start position, start + tilt
-	ldrsh r3,[suzptr,#suzHPosStrt]
-	ldrsb r4,[suzptr,#suzTiltAcumH]
+	ldrsh r4,[suzptr,#suzHPosStrt]
+	ldrsb r3,[suzptr,#suzTiltAcumH]
 	ldrsh r2,[suzptr,#suzHOff]
-	add r3,r3,r4
-	strh r3,[suzptr,#suzHPosStrt]
+	add r4,r4,r3
+	strh r4,[suzptr,#suzHPosStrt]
 	strb r7,[suzptr,#suzTiltAcumH]	;@ Zero TiltAcumH
-	sub r4,r3,r2				;@ r4=hOff
+	sub r4,r4,r2				;@ r4=hOff
 	mov r4,r4,lsl#16
 	orr r4,r4,r10,lsr#16
 	;@ Take the sign of the first quad (0) as the basic
@@ -1152,7 +1152,7 @@ rendLoop:
 	cmp r4,#GAME_WIDTH<<16
 	bcs checkBail
 	blx r11						;@ ProcessPixel(hOff, pix)
-	orr r7,r7,#1				;@ onScreen = TRUE
+	orr r7,r7,#1				;@ onScreen = true
 continueRend:
 	add r4,r4,r4,lsl#16			;@ hOff += hSign
 	adds r6,r6,#0x01000000
@@ -1274,99 +1274,6 @@ sprTypeTbl:
 	.long sprBgrShdw, sprBgrNoColl, sprBoundShdw, sprBound
 	.long sprNormal,  sprNoColl,    sprXorShdw,   sprShadow
 
-// BACKGROUND SHADOW
-// 1   F is opaque
-// 0   E is collideable
-// 1   0 is opaque and collideable
-// 0   allow collision detect
-// 1   allow coll. buffer access
-// 0   exclusive-or the data
-sprBgrShdw:
-	cmp r5,#0xE
-	beq suzWritePixel
-	stmfd sp!,{lr}
-	bl suzWritePixel			;@ r0 is not modified
-	ldmfd sp!,{lr}
-	b suzWriteCollision
-// BOUNDARY_SHADOW
-// 0   F is opaque
-// 0   E is collideable
-// 0   0 is opaque and collideable
-// 1   allow collision detect
-// 1   allow coll. buffer access
-// 0   exclusive-or the data
-sprBoundShdw:
-	cmp r5,#0
-	cmpne r5,#0xE				;@ This seems weird
-	bxeq lr
-	cmp r5,#0xF
-	beq suzTestCollision		;@ Only collision
-	stmfd sp!,{lr}
-	bl suzWritePixel			;@ r0 is not modified
-	ldmfd sp!,{lr}
-	b suzTestCollision
-// BOUNDARY
-// 0   F is opaque
-// 1   E is collideable
-// 0   0 is opaque and collideable
-// 1   allow collision detect
-// 1   allow coll. buffer access
-// 0   exclusive-or the data
-sprBound:
-	cmp r5,#0
-	bxeq lr
-	cmp r5,#0xF
-	beq suzTestCollision		;@ Only collision
-	stmfd sp!,{lr}
-	bl suzWritePixel			;@ r0 is not modified
-	ldmfd sp!,{lr}
-	b suzTestCollision
-// NORMAL
-// 1   F is opaque
-// 1   E is collideable
-// 0   0 is opaque and collideable
-// 1   allow collision detect
-// 1   allow coll. buffer access
-// 0   exclusive-or the data
-sprNormal:
-	cmp r5,#0
-	bxeq lr
-	stmfd sp!,{lr}
-	bl suzWritePixel			;@ r0 is not modified
-	ldmfd sp!,{lr}
-	b suzTestCollision
-// XOR SHADOW
-// 1   F is opaque
-// 0   E is collideable
-// 0   0 is opaque and collideable
-// 1   allow collision detect
-// 1   allow coll. buffer access
-// 1   exclusive-or the data
-sprXorShdw:
-	cmp r5,#0
-	bxeq lr
-	cmp r5,#0xE
-	beq suzXorPixel
-	stmfd sp!,{lr}
-	bl suzXorPixel				;@ r0 is not modified
-	ldmfd sp!,{lr}
-	b suzTestCollision
-// SHADOW
-// 1   F is opaque
-// 0   E is collideable
-// 0   0 is opaque and collideable
-// 1   allow collision detect
-// 1   allow coll. buffer access
-// 0   exclusive-or the data
-sprShadow:
-	cmp r5,#0
-	bxeq lr
-	cmp r5,#0xE
-	beq suzWritePixel
-	stmfd sp!,{lr}
-	bl suzWritePixel			;@ r0 is not modified
-	ldmfd sp!,{lr}
-	b suzTestCollision
 ;@----------------------------------------------------------------------------
 // NOCOLLIDE
 // 1   F is opaque
@@ -1402,17 +1309,19 @@ suzWritePixel:				;@ In r4=hoff, r5=pixel.
 
 	bx lr
 ;@----------------------------------------------------------------------------
-suzXorPixel:				;@ In r4=hoff, r5=pixel.
-;@----------------------------------------------------------------------------
-	ldrb r3,[r8,r4,lsr#17]
-	tst r4,#0x10000
-	eoreq r3,r3,r5,lsl#4
-	eorne r3,r3,r5
-	strb r3,[r8,r4,lsr#17]
-
-	add r9,r9,#3*3				;@ 3*SPR_RDWR_CYC
-
-	bx lr
+// BACKGROUND SHADOW
+// 1   F is opaque
+// 0   E is collideable
+// 1   0 is opaque and collideable
+// 0   allow collision detect
+// 1   allow coll. buffer access
+// 0   exclusive-or the data
+sprBgrShdw:
+	cmp r5,#0xE
+	beq suzWritePixel
+	stmfd sp!,{lr}
+	bl suzWritePixel
+	ldmfd sp!,{lr}
 ;@----------------------------------------------------------------------------
 suzWriteCollision:			;@ In r4=hoff.
 ;@----------------------------------------------------------------------------
@@ -1431,6 +1340,92 @@ suzWriteCollision:			;@ In r4=hoff.
 	add r9,r9,#2*3				;@ 2*SPR_RDWR_CYC
 
 	bx lr
+;@----------------------------------------------------------------------------
+// XOR SHADOW
+// 1   F is opaque
+// 0   E is collideable
+// 0   0 is opaque and collideable
+// 1   allow collision detect
+// 1   allow coll. buffer access
+// 1   exclusive-or the data
+sprXorShdw:
+	cmp r5,#0
+	bxeq lr
+;@----------------------------------------------------------------------------
+suzXorPixel:				;@ In r4=hoff, r5=pixel.
+;@----------------------------------------------------------------------------
+	ldrb r3,[r8,r4,lsr#17]
+	tst r4,#0x10000
+	eoreq r3,r3,r5,lsl#4
+	eorne r3,r3,r5
+	strb r3,[r8,r4,lsr#17]
+
+	add r9,r9,#3*3				;@ 3*SPR_RDWR_CYC
+
+	cmp r5,#0xE
+	bxeq lr
+	b suzTestCollision
+
+;@----------------------------------------------------------------------------
+// BOUNDARY_SHADOW
+// 0   F is opaque
+// 0   E is collideable
+// 0   0 is opaque and collideable
+// 1   allow collision detect
+// 1   allow coll. buffer access
+// 0   exclusive-or the data
+sprBoundShdw:
+	cmp r5,#0
+	cmpne r5,#0xE				;@ This seems weird
+	bxeq lr
+	cmp r5,#0xF
+	beq suzTestCollision		;@ Only collision
+	b suzWriteAndTest
+// BOUNDARY
+// 0   F is opaque
+// 1   E is collideable
+// 0   0 is opaque and collideable
+// 1   allow collision detect
+// 1   allow coll. buffer access
+// 0   exclusive-or the data
+sprBound:
+	cmp r5,#0xF
+	beq suzTestCollision		;@ Only collision
+	b sprNormal
+// SHADOW
+// 1   F is opaque
+// 0   E is collideable
+// 0   0 is opaque and collideable
+// 1   allow collision detect
+// 1   allow coll. buffer access
+// 0   exclusive-or the data
+sprShadow:
+	cmp r5,#0xE
+	beq suzWritePixel
+;@----------------------------------------------------------------------------
+// NORMAL
+// 1   F is opaque
+// 1   E is collideable
+// 0   0 is opaque and collideable
+// 1   allow collision detect
+// 1   allow coll. buffer access
+// 0   exclusive-or the data
+sprNormal:
+	cmp r5,#0
+	bxeq lr
+;@----------------------------------------------------------------------------
+suzWriteAndTest:				;@ In r4=hoff, r5=pixel.
+;@----------------------------------------------------------------------------
+	ldrb r3,[r8,r4,lsr#17]
+	tst r4,#0x10000
+	andeq r3,r3,#0x0F
+	orreq r3,r3,r5,lsl#4
+	andne r3,r3,#0xF0
+	orrne r3,r3,r5
+	strb r3,[r8,r4,lsr#17]
+
+	add r9,r9,#2*3				;@ 2*SPR_RDWR_CYC
+
 ;@----------------------------------------------------------------------------
 suzTestCollision:			;@ In r4=hoff. Out r0=collision
 ;@----------------------------------------------------------------------------
