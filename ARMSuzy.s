@@ -1066,10 +1066,8 @@ exitQuadLoop:
 	ldmfd sp!,{r4-r8,r10,r11,lr}
 	bx lr
 checkVBail:
-	movsmi r1,r8,lsl#16
-	bmi breakV2Loop
-//	cmppl r1,#0
-//	bpl breakV2Loop
+	teq r8,r8,lsl#16			;@ Are both sign same?
+	bpl breakV2Loop				;@ Abort
 	b keepRendering
 
 #ifdef NDS
@@ -1159,8 +1157,8 @@ continueRend:
 	bcc rendLoop
 	b horizontalLoop
 checkBail:
-	tst r7,#1
-	beq continueRend
+	teq r4,r4,lsl#16			;@ Are both sign same?
+	bmi continueRend			;@ No, continue
 exitRender:
 	ands r7,r7,#1				;@ onScreen
 	strbne r7,[suzptr,#everOnScreen]
