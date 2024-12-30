@@ -16,8 +16,6 @@
 #include "ARMSuzy.i"
 #include "../ARMMikey/ARM6502/M6502.i"
 
-#define LINE_END		0x80
-
 	.global suzyInit
 	.global suzyReset
 	.global suzySaveState
@@ -1074,6 +1072,59 @@ checkVBail:
 	bpl breakV2Loop				;@ Abort
 	b keepRendering
 
+;@----------------------------------------------------------------------------
+;@suzLineGetPixel:			;@ Out r5=pixel
+	.macro suzLineGetPixel
+;@----------------------------------------------------------------------------
+	ldr r1,[suzptr,#suzLineRepeatCount]
+	ldrb r2,[suzptr,#suzLineType]
+	subs r0,r1,#1
+	bmi fetchPacket
+
+fetchPixel:
+	movs r2,r2,lsr#1			;@ Check bit #0 & #7
+	bne doLiteralLine
+checkMoreLineType:
+	str r0,[suzptr,#suzLineRepeatCount]
+	bcc fetchPacked				;@ line_packed?
+	bl suzGetPixelBits
+	add r1,suzptr,#suzPenIndex
+	ldrb r5,[r1,r0]
+	b getPixelEnd
+fetchPacked:
+	ldrb r5,[suzptr,#suzLinePixel]
+	b getPixelEnd
+doLiteralLine:					;@ line_abs_literal
+	ldrb r0,[suzptr,#suzSprCtl0_PixelBits]
+	subs r5,r1,r0
+	cmp r5,r0
+	movcc r5,#0
+	str r5,[suzptr,#suzLineRepeatCount]
+	bl suzLineGetBits
+	orrs r5,r5,r0
+	beq exitLineRender
+	add r1,suzptr,#suzPenIndex
+	ldrb r5,[r1,r0]
+	b getPixelEnd
+
+fetchPacket:
+	cmp r2,#0x80				;@ line_abs_literal
+	beq exitLineRender
+	mov r0,#5
+	bl suzLineGetBits
+	movs r5,r0,ror#4
+	beq exitLineRender
+	and r0,r0,#0xF
+	str r0,[suzptr,#suzLineRepeatCount]
+	strb r5,[suzptr,#suzLineType]
+	bl suzGetPixelBits
+	tst r5,#1					;@ line_literal
+	add r1,suzptr,#suzPenIndex
+	ldrb r5,[r1,r0]
+	strbeq r5,[suzptr,#suzLinePixel]
+getPixelEnd:
+	.endm
+
 #ifdef NDS
 	.section .itcm						;@ For the NDS ARM9
 #elif GBA
@@ -1134,10 +1185,9 @@ suzLineRender:				;@ In r10=hSign, r1=hQuadOff, r2=vOff.
 	ldrhcc r0,[suzptr,#suzHSizOff]	;@ If hSign == 1
 	orr r6,r6,r0,lsl#16
 //	mov r7,#0					;@ Bottom part is "onScreen"
+;@------------------------------------
 horizontalLoop:
-	bl suzLineGetPixel			;@ Returns pixel in r5.
-	cmp r5,#0x80
-	beq exitRender
+	suzLineGetPixel				;@ Returns pixel in r5 or jumps to exitLineRender.
 	add r6,r6,r6,lsl#16			;@ HSIZACUM.Word += SPRHSIZ.Word
 	movs r0,r6,lsr#24			;@ pixel_width = HSIZACUM.Byte.High
 	beq horizontalLoop
@@ -1155,7 +1205,7 @@ continueRend:
 checkBail:
 	teq r4,r4,lsl#16			;@ Are both sign same?
 	bmi continueRend			;@ No, continue
-exitRender:
+exitLineRender:
 	ands r7,r7,#1				;@ onScreen
 	strbne r7,[suzptr,#everOnScreen]
 	ldmfd sp!,{r4-r8,r10,r11,lr}
@@ -1206,61 +1256,6 @@ fetchNewBits:
 	ldmfd sp!,{r4-r5}
 	b extractBits
 
-;@----------------------------------------------------------------------------
-suzLineGetPixel:			;@ Out r5=pixel
-;@----------------------------------------------------------------------------
-	stmfd sp!,{lr}
-	ldr r1,[suzptr,#suzLineRepeatCount]
-	ldrb r2,[suzptr,#suzLineType]
-	subs r0,r1,#1
-	bmi fetchPacket
-
-fetchPixel:
-	movs r2,r2,lsr#1			;@ Check bit #0 & #7
-	bne doLiteralLine
-checkMoreLineType:
-	str r0,[suzptr,#suzLineRepeatCount]
-	bcc fetchPacked				;@ line_packed?
-	bl suzGetPixelBits
-	add r1,suzptr,#suzPenIndex
-	ldrb r5,[r1,r0]
-	ldmfd sp!,{pc}
-fetchPacked:
-	ldrb r5,[suzptr,#suzLinePixel]
-	ldmfd sp!,{pc}
-doLiteralLine:					;@ line_abs_literal
-	ldrb r0,[suzptr,#suzSprCtl0_PixelBits]
-	subs r5,r1,r0
-	cmp r5,r0
-	movcc r5,#0
-	str r5,[suzptr,#suzLineRepeatCount]
-	bl suzLineGetBits
-	orrs r5,r5,r0
-	moveq r5,#LINE_END
-	addne r1,suzptr,#suzPenIndex
-	ldrbne r5,[r1,r0]
-	ldmfd sp!,{pc}
-
-fetchPacket:
-	cmp r2,#0x80				;@ line_abs_literal
-	beq exitLineEnd
-	mov r0,#5
-	bl suzLineGetBits
-	movs r5,r0,ror#4
-	beq exitLineEnd
-	and r0,r0,#0xF
-	str r0,[suzptr,#suzLineRepeatCount]
-	strb r5,[suzptr,#suzLineType]
-	bl suzGetPixelBits
-	tst r5,#1					;@ line_literal
-	add r1,suzptr,#suzPenIndex
-	ldrb r5,[r1,r0]
-	strbeq r5,[suzptr,#suzLinePixel]
-	ldmfd sp!,{pc}
-
-exitLineEnd:
-	mov r5,#LINE_END
-	ldmfd sp!,{pc}
 ;@----------------------------------------------------------------------------
 ;@ suzProcessPixel:			;@ In r4=hoff, r5=pixel
 ;@----------------------------------------------------------------------------
