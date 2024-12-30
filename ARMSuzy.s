@@ -1027,20 +1027,23 @@ keepRendering:
 	movs r0,r0,lsl#27			;@ Check ReloadDepth
 	bcc noStretchTilt
 	bpl noTilt
-	ldrh r0,[suzptr,#suzTilt]
-	ldrh r1,[suzptr,#suzTiltAcum]
+	ldrsh r0,[suzptr,#suzTilt]
+	ldrb r1,[suzptr,#suzTiltAcum]
+	ldrh r2,[suzptr,#suzHPosStrt]
 	add r1,r1,r0
-	strh r1,[suzptr,#suzTiltAcum]
+	add r2,r2,r1,asr#8
+	strb r1,[suzptr,#suzTiltAcum]
+	strh r2,[suzptr,#suzHPosStrt]
 noTilt:
 	ldrh r0,[suzptr,#suzStretch]
 	ldrh r1,[suzptr,#suzSprHSiz]
+	ldrb r2,[suzptr,#suzSprSys]
 	add r1,r1,r0
 	strh r1,[suzptr,#suzSprHSiz]
-	ldrb r2,[suzptr,#suzSprSys]
 	tst r2,#0x10				;@ Check VStretch
-	ldrhne r1,[suzptr,#suzSprVSiz]
-	addne r1,r1,r0
-	strhne r1,[suzptr,#suzSprVSiz]
+	movne r11,r11,ror#16
+	addne r11,r11,r0,lsl#16
+	movne r11,r11,ror#16
 noStretchTilt:
 	adds r11,r11,#0x01000000
 	bcc v2Loop
@@ -1061,6 +1064,7 @@ exitQuad:
 	bne quadLoop
 
 exitQuadLoop:
+//	strh r11,[suzptr,#suzSprVSiz]
 //	mov r11,r11,lsr#16
 //	strh r11,[suzptr,#suzVSizAcum]
 	ldmfd sp!,{r4-r8,r10,r11,lr}
@@ -1082,10 +1086,10 @@ suzLineRender:				;@ In r10=hSign, r1=hQuadOff, r2=vOff.
 
 	ldr r6,[suzptr,#suzVidBas]	;@ Also suzCollBas
 	ldr r7,[suzptr,#suzyRAM]
-	mov r5,r6,lsl#16
+	mov r8,r6,lsl#16
 	add r2,r2,r2,lsl#2			;@ *5
-	add r5,r5,r2,lsl#4+16		;@ *16
-	add r8,r7,r5,lsr#16
+	add r8,r8,r2,lsl#4+16		;@ *16
+	add r8,r7,r8,lsr#16
 //	str r8,[suzptr,#suzLineBaseAddress]
 	add r6,r6,r2,lsl#4+16		;@ *16
 	add r6,r7,r6,lsr#16
@@ -1110,19 +1114,11 @@ suzLineRender:				;@ In r10=hSign, r1=hQuadOff, r2=vOff.
 	strb r6,[suzptr,#suzLineType]
 	str r5,[suzptr,#suzLineRepeatCount]
 
-;@----------------------------------------------------------------------------
-suzRenderLine:				;@ In r10=hSign, r1=hQuadOff.
-;@----------------------------------------------------------------------------
-
 	;@ Work out the horizontal pixel start position, start + tilt
-	ldrsh r4,[suzptr,#suzHPosStrt]
-	ldrsb r3,[suzptr,#suzTiltAcumH]
-	ldrsh r2,[suzptr,#suzHOff]
-	add r4,r4,r3
-	strh r4,[suzptr,#suzHPosStrt]
-	strb r7,[suzptr,#suzTiltAcumH]	;@ Zero TiltAcumH
-	sub r4,r4,r2				;@ r4=hOff
+	ldrh r4,[suzptr,#suzHPosStrt]
+	ldrh r2,[suzptr,#suzHOff]
 	mov r4,r4,lsl#16
+	sub r4,r4,r2,lsl#16			;@ r4=hOff
 	orr r4,r4,r10,lsr#16
 	;@ Take the sign of the first quad (0) as the basic
 	;@ sign, all other quads drawing in the other direction
