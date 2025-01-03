@@ -674,8 +674,12 @@ noSignedAB:
 	mul r3,r1,r0
 	tst r2,#0x80				;@ SignedMath
 	beq noSignedMult
+#ifdef __ARM_ARCH_5TE__
 	ldrd r0,r1,[suzptr,#mathAB_sign]	;@ r1=mathCD_sign
-//	ldr r1,[suzptr,#mathCD_sign]
+#else
+	ldr r0,[suzptr,#mathAB_sign]	;@ r1=mathCD_sign
+	ldr r1,[suzptr,#mathCD_sign]
+#endif
 	adds r0,r0,r1
 	rsbeq r3,r3,#0
 noSignedMult:
@@ -1072,6 +1076,11 @@ checkVBail:
 	bpl breakV2Loop				;@ Abort
 	b keepRendering
 
+#ifdef NDS
+	.section .itcm						;@ For the NDS ARM9
+#elif GBA
+	.section .iwram, "ax", %progbits	;@ For the GBA
+#endif
 ;@----------------------------------------------------------------------------
 ;@suzLineGetPixel:			;@ Out r5=pixel
 	.macro suzLineGetPixel
@@ -1125,11 +1134,6 @@ fetchPacket:
 getPixelEnd:
 	.endm
 
-#ifdef NDS
-	.section .itcm						;@ For the NDS ARM9
-#elif GBA
-	.section .iwram, "ax", %progbits	;@ For the GBA
-#endif
 ;@----------------------------------------------------------------------------
 suzLineRender:				;@ In r10=hSign, r1=hQuadOff, r2=vOff.
 ;@----------------------------------------------------------------------------
@@ -1195,7 +1199,12 @@ horizontalLoop:
 rendLoop:
 	cmp r4,#GAME_WIDTH<<16
 	bcs checkBail
+#ifdef __ARM_ARCH_5TE__
 	blx r11						;@ ProcessPixel(hOff, pix)
+#else
+	mov lr,pc
+	bx r11						;@ ProcessPixel(hOff, pix)
+#endif
 	orr r7,r7,#1				;@ onScreen = true
 continueRend:
 	add r4,r4,r4,lsl#16			;@ hOff += hSign
@@ -1224,8 +1233,12 @@ suzLineGetBits:				;@ In r0=bitCount, less or equal to 8, Out r0=bits.
 	bxle lr
 	str r1,[suzptr,#suzLinePacketBitsLeft]
 
+#ifdef __ARM_ARCH_5TE__
 	ldrd r2,r3,[suzptr,#suzLineShiftRegCount]
-//	ldr r3,[suzptr,#suzLineShiftReg]
+#else
+	ldr r2,[suzptr,#suzLineShiftRegCount]
+	ldr r3,[suzptr,#suzLineShiftReg]
+#endif
 	subs r2,r2,r0
 	bcc fetchNewBits
 extractBits:
