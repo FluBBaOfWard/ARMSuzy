@@ -1,7 +1,13 @@
 ARMSuzy revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
-V0.1.0 - 2024-12-05 (FluBBa)
+V0.1.0 - 2025-01-03 (FluBBa)
+	First real version.
+
+V0.0.5 - 2024-12-21 (FluBBa)
+	Lots of optimizations.
+
+V0.0.3 - 2024-11-28 (FluBBa)
 	Initial release (NDS).
 
 V0.0.1 - 2024-09-22 (FluBBa)
