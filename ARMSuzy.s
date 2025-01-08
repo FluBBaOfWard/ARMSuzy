@@ -1020,7 +1020,7 @@ v2Loop:
 	cmp r8,#GAME_HEIGHT<<16
 	bcs checkVBail
 //	mov r0,r10					;@ hSign
-	mov r1,r6					;@ hQuadOff
+//	mov r1,r6					;@ hQuadOff
 	mov r2,r8,lsr#16			;@ vOff
 	bl suzLineRender
 keepRendering:
@@ -1085,7 +1085,7 @@ checkVBail:
 ;@suzLineGetPixel:			;@ Out r5=pixel
 	.macro suzLineGetPixel
 ;@----------------------------------------------------------------------------
-	ldr r1,[suzptr,#suzLineRepeatCount]
+	ldrsh r1,[suzptr,#suzLineRepeatCount]
 	ldrb r2,[suzptr,#suzLineType]
 	subs r0,r1,#1
 	bmi fetchPacket
@@ -1094,23 +1094,20 @@ fetchPixel:
 	movs r2,r2,lsr#1			;@ Check bit #0 & #7
 	bne doLiteralLine
 checkMoreLineType:
-	str r0,[suzptr,#suzLineRepeatCount]
-	bcc fetchPacked				;@ line_packed?
+	strh r0,[suzptr,#suzLineRepeatCount]
+	bcc getPixelEnd				;@ line_packed? Reuse r5.
 	bl suzGetPixelBits
 	add r1,suzptr,#suzPenIndex
 	ldrb r5,[r1,r0]
-	b getPixelEnd
-fetchPacked:
-	ldrb r5,[suzptr,#suzLinePixel]
 	b getPixelEnd
 doLiteralLine:					;@ line_abs_literal
 	ldrb r0,[suzptr,#suzSprCtl0_PixelBits]
 	subs r5,r1,r0
 	cmp r5,r0
 	movcc r5,#0
-	str r5,[suzptr,#suzLineRepeatCount]
+	strh r5,[suzptr,#suzLineRepeatCount]
 	bl suzLineGetBits
-	orrs r5,r5,r0
+	orrs r1,r5,r0
 	beq exitLineRender
 	add r1,suzptr,#suzPenIndex
 	ldrb r5,[r1,r0]
@@ -1124,31 +1121,48 @@ fetchPacket:
 	movs r5,r0,ror#4
 	beq exitLineRender
 	and r0,r0,#0xF
-	str r0,[suzptr,#suzLineRepeatCount]
+	strh r0,[suzptr,#suzLineRepeatCount]
 	strb r5,[suzptr,#suzLineType]
 	bl suzGetPixelBits
-	tst r5,#1					;@ line_literal
 	add r1,suzptr,#suzPenIndex
 	ldrb r5,[r1,r0]
-	strbeq r5,[suzptr,#suzLinePixel]
 getPixelEnd:
 	.endm
 
 ;@----------------------------------------------------------------------------
-suzLineRender:				;@ In r10=hSign, r1=hQuadOff, r2=vOff.
+suzLineRender:				;@ In r10=hSign, r6=hQuadOff, r2=vOff.
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4-r8,r10,r11,lr}
 
-	ldr r6,[suzptr,#suzVidBas]	;@ Also suzCollBas
+	;@ Work out the horizontal pixel start position, start + tilt
+	ldrh r4,[suzptr,#suzHPosStrt]
+	ldrh r0,[suzptr,#suzHOff]
+	mov r4,r4,lsl#16
+	sub r4,r4,r0,lsl#16			;@ r4=hOff
+	orr r4,r4,r10,lsr#16
+	;@ Take the sign of the first quad (0) as the basic
+	;@ sign, all other quads drawing in the other direction
+	;@ get offset by 1 pixel in the other direction, this
+	;@ fixes the squashed look on the multi-quad sprites.
+	cmp r6,r4,lsl#16
+	addne r4,r4,r4,lsl#16
+
+	ldrh r6,[suzptr,#suzSprHSiz]
+	;@ Zero/Force the horizontal scaling accumulator
+	adds r0,r10,#0x10000
+	ldrhcc r0,[suzptr,#suzHSizOff]	;@ If hSign == 1
+	orr r6,r6,r0,lsl#16
+
+	ldr r0,[suzptr,#suzVidBas]	;@ Also suzCollBas
 	ldr r7,[suzptr,#suzyRAM]
-	mov r8,r6,lsl#16
+	mov r8,r0,lsl#16
 	add r2,r2,r2,lsl#2			;@ *5
 	add r8,r8,r2,lsl#4+16		;@ *16
 	add r8,r7,r8,lsr#16
 //	str r8,[suzptr,#suzLineBaseAddress]
-	add r6,r6,r2,lsl#4+16		;@ *16
-	add r6,r7,r6,lsr#16
-	str r6,[suzptr,#suzLineCollisionAddress]
+	add r0,r0,r2,lsl#4+16		;@ *16
+	add r0,r7,r0,lsr#16
+	str r0,[suzptr,#suzLineCollisionAddress]
 
 	ldrh r5,[suzptr,#suzSprDLine]
 	ldrb r2,[suzptr,#suzSprDOff]
@@ -1156,39 +1170,20 @@ suzLineRender:				;@ In r10=hSign, r1=hQuadOff, r2=vOff.
 	strh r5,[suzptr,#suzTmpAdr]
 	sub r5,r2,#1
 	mov r5,r5,lsl#3
-	str r5,[suzptr,#suzLinePacketBitsLeft]
+	strh r5,[suzptr,#suzLinePacketBitsLeft]
 
 	add r9,r9,#3				;@ SPR_RDWR_CYC
 
-	mov r7,#0
-	str r7,[suzptr,#suzLineShiftRegCount]
-
-	ldrb r6,[suzptr,#suzSprCtl1]
-	ands r6,r6,#0x80			;@ Literal -> line_abs_literal
-	moveq r5,r7					;@ LineRepeatCount = LinePacketBitsLeft
-	strb r6,[suzptr,#suzLineType]
-	str r5,[suzptr,#suzLineRepeatCount]
-
-	;@ Work out the horizontal pixel start position, start + tilt
-	ldrh r4,[suzptr,#suzHPosStrt]
-	ldrh r2,[suzptr,#suzHOff]
-	mov r4,r4,lsl#16
-	sub r4,r4,r2,lsl#16			;@ r4=hOff
-	orr r4,r4,r10,lsr#16
-	;@ Take the sign of the first quad (0) as the basic
-	;@ sign, all other quads drawing in the other direction
-	;@ get offset by 1 pixel in the other direction, this
-	;@ fixes the squashed look on the multi-quad sprites.
-	cmp r1,r4,lsl#16
-	addne r4,r4,r4,lsl#16
+	ldrb r0,[suzptr,#suzSprCtl1]
+	ands r0,r0,#0x80			;@ Literal -> line_abs_literal
+	moveq r5,r0					;@ LineRepeatCount = LinePacketBitsLeft
+	strb r0,[suzptr,#suzLineType]
+	strh r5,[suzptr,#suzLineRepeatCount]
 
 	ldr r11,[suzptr,#suzSprTypeFunc]
-	ldrh r6,[suzptr,#suzSprHSiz]
-	;@ Zero/Force the horizontal scaling accumulator
-	adds r0,r10,#0x10000
-	ldrhcc r0,[suzptr,#suzHSizOff]	;@ If hSign == 1
-	orr r6,r6,r0,lsl#16
-//	mov r7,#0					;@ Bottom part is "onScreen"
+	ldrb r7,[suzptr,#suzSprColl]
+	mov r7,r7,lsl#24			;@ Bottom part is "onScreen", top is suzSprColl
+	strh r7,[suzptr,#suzLineShiftRegCount]
 ;@------------------------------------
 horizontalLoop:
 	suzLineGetPixel				;@ Returns pixel in r5 or jumps to exitLineRender.
@@ -1227,11 +1222,11 @@ suzGetPixelBits:			;@ Out r0=bits.
 ;@----------------------------------------------------------------------------
 suzLineGetBits:				;@ In r0=bitCount, less or equal to 8, Out r0=bits.
 ;@----------------------------------------------------------------------------
-	ldr r1,[suzptr,#suzLinePacketBitsLeft]
+	ldrsh r1,[suzptr,#suzLinePacketBitsLeft]
 	subs r1,r1,r0
 	movle r0,#0
 	bxle lr
-	str r1,[suzptr,#suzLinePacketBitsLeft]
+	strh r1,[suzptr,#suzLinePacketBitsLeft]
 
 #ifdef __ARM_ARCH_5TE__
 	ldrd r2,r3,[suzptr,#suzLineShiftRegCount]
@@ -1327,16 +1322,15 @@ sprBgrShdw:
 ;@----------------------------------------------------------------------------
 suzWriteCollision:			;@ In r4=hoff.
 ;@----------------------------------------------------------------------------
-	ldrb r1,[suzptr,#suzSprColl]
-	cmp r1,#0x10
+	cmp r7,#0x10000000
 	bxpl lr
 	ldr r2,[suzptr,#suzLineCollisionAddress]
 	tst r4,#0x10000
 	ldrb r3,[r2,r4,lsr#17]
 	andeq r3,r3,#0x0F
-	orreq r3,r3,r1,lsl#4
+	orreq r3,r3,r7,lsr#20
 	andne r3,r3,#0xF0
-	orrne r3,r3,r1
+	orrne r3,r3,r7,lsr#24
 	strb r3,[r2,r4,lsr#17]
 
 	add r9,r9,#2*3				;@ 2*SPR_RDWR_CYC
@@ -1431,18 +1425,17 @@ suzWriteAndTest:				;@ In r4=hoff, r5=pixel.
 ;@----------------------------------------------------------------------------
 suzTestCollision:			;@ In r4=hoff. Out r0=collision
 ;@----------------------------------------------------------------------------
-	ldrb r1,[suzptr,#suzSprColl]
-	cmp r1,#0x10
+	cmp r7,#0x10000000
 	bxpl lr
 	ldr r2,[suzptr,#suzLineCollisionAddress]
 	tst r4,#0x10000
 	ldrb r3,[r2,r4,lsr#17]
 	moveq r0,r3,lsr#4
 	andeq r3,r3,#0x0F
-	orreq r3,r3,r1,lsl#4
+	orreq r3,r3,r7,lsr#20
 	andne r0,r3,#0x0F
 	andne r3,r3,#0xF0
-	orrne r3,r3,r1
+	orrne r3,r3,r7,lsr#24
 	strb r3,[r2,r4,lsr#17]
 
 	ldrb r2,[suzptr,#suzCollision]

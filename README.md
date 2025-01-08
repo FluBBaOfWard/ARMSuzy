@@ -1,4 +1,4 @@
-# ARMSuzy V0.1.0
+# ARMSuzy V0.1.2
 
 Atari Lynx Suzy sprite-blitter chip emulator for ARM32.
 
