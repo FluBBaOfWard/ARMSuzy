@@ -1085,44 +1085,37 @@ checkVBail:
 ;@suzLineGetPixel:			;@ Out r5=pixel
 	.macro suzLineGetPixel
 ;@----------------------------------------------------------------------------
-	ldrsh r1,[suzptr,#suzLineRepeatCount]
-	ldrb r2,[suzptr,#suzLineType]
-	subs r0,r1,#1
+	ldr r1,[suzptr,#suzLineRepCountTyp]
+	subs r0,r1,#0x10000
 	bmi fetchPacket
 
 fetchPixel:
-	movs r2,r2,lsr#1			;@ Check bit #0 & #7
-	bne doLiteralLine
+	movs r2,r1,lsl#25			;@ Check bit #0 & #7
+//	bcs doLiteralLine
+	bcs getRealPixel
 checkMoreLineType:
-	strh r0,[suzptr,#suzLineRepeatCount]
-	bcc getPixelEnd				;@ line_packed? Reuse r5.
-	bl suzGetPixelBits
-	add r1,suzptr,#suzPenIndex
-	ldrb r5,[r1,r0]
-	b getPixelEnd
+	str r0,[suzptr,#suzLineRepCountTyp]
+	beq getPixelEnd				;@ line_packed? Reuse r5.
+	b getRealPixel
 doLiteralLine:					;@ line_abs_literal
 	ldrb r0,[suzptr,#suzSprCtl0_PixelBits]
-	subs r5,r1,r0
-	cmp r5,r0
-	movcc r5,#0
-	strh r5,[suzptr,#suzLineRepeatCount]
-	bl suzLineGetBits
-	orrs r1,r5,r0
-	beq exitLineRender
-	add r1,suzptr,#suzPenIndex
-	ldrb r5,[r1,r0]
-	b getPixelEnd
+	rsbs r2,r0,r1,lsr#16
+	strhhi r2,[suzptr,#suzLineRepCountTyp+2]
+	bhi getRealPixel
+	b exitLineRender
 
 fetchPacket:
-	cmp r2,#0x80				;@ line_abs_literal
-	beq exitLineRender
+//	movs r2,r1,lsl#25			;@ line_abs_literal
+//	bcs exitLineRender
 	mov r0,#5
 	bl suzLineGetBits
-	movs r5,r0,ror#4
+	movs r1,r0,ror#4
 	beq exitLineRender
-	and r0,r0,#0xF
-	strh r0,[suzptr,#suzLineRepeatCount]
-	strb r5,[suzptr,#suzLineType]
+	and r0,r1,#1
+	orr r0,r0,r1,lsr#12
+setRepeatCount:
+	str r0,[suzptr,#suzLineRepCountTyp]
+getRealPixel:
 	bl suzGetPixelBits
 	add r1,suzptr,#suzPenIndex
 	ldrb r5,[r1,r0]
@@ -1176,9 +1169,8 @@ suzLineRender:				;@ In r10=hSign, r6=hQuadOff, r2=vOff.
 
 	ldrb r0,[suzptr,#suzSprCtl1]
 	ands r0,r0,#0x80			;@ Literal -> line_abs_literal
-	moveq r5,r0					;@ LineRepeatCount = LinePacketBitsLeft
-	strb r0,[suzptr,#suzLineType]
-	strh r5,[suzptr,#suzLineRepeatCount]
+	orrne r0,r0,r5,lsl#16
+	str r0,[suzptr,#suzLineRepCountTyp]
 
 	ldr r11,[suzptr,#suzSprTypeFunc]
 	ldrb r7,[suzptr,#suzSprColl]
@@ -1224,8 +1216,9 @@ suzLineGetBits:				;@ In r0=bitCount, less or equal to 8, Out r0=bits.
 ;@----------------------------------------------------------------------------
 	ldrsh r1,[suzptr,#suzLinePacketBitsLeft]
 	subs r1,r1,r0
-	movle r0,#0
-	bxle lr
+	ble exitLineRender
+//	movle r0,#0
+//	bxle lr
 	strh r1,[suzptr,#suzLinePacketBitsLeft]
 
 #ifdef __ARM_ARCH_5TE__
@@ -1245,9 +1238,9 @@ extractBits:
 	bx lr
 
 fetchNewBits:
-	stmfd sp!,{r4-r5}
+	stmfd sp!,{r4}
 	ldr r4,[suzptr,#suzyRAM]
-	ldrh r5,[suzptr,#suzTmpAdr]
+	ldrh r5,[suzptr,#suzTmpAdr]		;@ r5 is ok to use here.
 	add r2,r2,#24
 	ldrb r1,[r4,r5]!
 	orr r3,r1,r3,lsl#8
@@ -1261,7 +1254,7 @@ fetchNewBits:
 
 	add r9,r9,#3*3				;@ 3 * SPR_RDWR_CYC
 
-	ldmfd sp!,{r4-r5}
+	ldmfd sp!,{r4}
 	b extractBits
 
 ;@----------------------------------------------------------------------------
