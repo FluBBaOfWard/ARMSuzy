@@ -1081,40 +1081,26 @@ checkVBail:
 #elif GBA
 	.section .iwram, "ax", %progbits	;@ For the GBA
 #endif
+
+fetchPacket:
+	mov r0,#5
+	bl suzLineGetBits
+	movs r0,r0,ror#4
+	beq exitLineRender
+	str r0,[suzptr,#suzLineRepCountTyp]
+	b getRealPixel
 ;@----------------------------------------------------------------------------
 ;@suzLineGetPixel:			;@ Out r5=pixel
 	.macro suzLineGetPixel
 ;@----------------------------------------------------------------------------
-	ldr r1,[suzptr,#suzLineRepCountTyp]
-	subs r0,r1,#0x10000
-	bmi fetchPacket
+	ldr r0,[suzptr,#suzLineRepCountTyp]
+	subs r0,r0,#0x10000000
+	bcc fetchPacket
 
 fetchPixel:
-	movs r2,r1,lsl#25			;@ Check bit #0 & #7
-//	bcs doLiteralLine
-	bcs getRealPixel
-checkMoreLineType:
-	str r0,[suzptr,#suzLineRepCountTyp]
+	movs r1,r0,lsl#24			;@ Check bit #0 & #7
+	strpl r0,[suzptr,#suzLineRepCountTyp]
 	beq getPixelEnd				;@ line_packed? Reuse r5.
-	b getRealPixel
-doLiteralLine:					;@ line_abs_literal
-	ldrb r0,[suzptr,#suzSprCtl0_PixelBits]
-	rsbs r2,r0,r1,lsr#16
-	strhhi r2,[suzptr,#suzLineRepCountTyp+2]
-	bhi getRealPixel
-	b exitLineRender
-
-fetchPacket:
-//	movs r2,r1,lsl#25			;@ line_abs_literal
-//	bcs exitLineRender
-	mov r0,#5
-	bl suzLineGetBits
-	movs r1,r0,ror#4
-	beq exitLineRender
-	and r0,r1,#1
-	orr r0,r0,r1,lsr#12
-setRepeatCount:
-	str r0,[suzptr,#suzLineRepCountTyp]
 getRealPixel:
 	bl suzGetPixelBits
 	add r1,suzptr,#suzPenIndex
@@ -1169,7 +1155,7 @@ suzLineRender:				;@ In r10=hSign, r6=hQuadOff, r2=vOff.
 
 	ldrb r0,[suzptr,#suzSprCtl1]
 	ands r0,r0,#0x80			;@ Literal -> line_abs_literal
-	orrne r0,r0,r5,lsl#16
+	orrne r0,r0,#0x70000000		;@ Not actually counted
 	str r0,[suzptr,#suzLineRepCountTyp]
 
 	ldr r11,[suzptr,#suzSprTypeFunc]
@@ -1217,8 +1203,6 @@ suzLineGetBits:				;@ In r0=bitCount, less or equal to 8, Out r0=bits.
 	ldrsh r1,[suzptr,#suzLinePacketBitsLeft]
 	subs r1,r1,r0
 	ble exitLineRender
-//	movle r0,#0
-//	bxle lr
 	strh r1,[suzptr,#suzLinePacketBitsLeft]
 
 #ifdef __ARM_ARCH_5TE__
