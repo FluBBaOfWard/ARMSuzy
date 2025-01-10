@@ -1082,13 +1082,30 @@ checkVBail:
 	.section .iwram, "ax", %progbits	;@ For the GBA
 #endif
 
-fetchPacket:
-	mov r0,#5
-	bl suzLineGetBits
-	movs r0,r0,ror#4
-	beq exitLineRender
-	str r0,[suzptr,#suzLineRepCountTyp]
-	b getRealPixel
+;@----------------------------------------------------------------------------
+suzLineGetBits:				;@ In r0=bitCount, less or equal to 8, Out r0=bits.
+	.macro suzLineGetBits
+;@----------------------------------------------------------------------------
+	ldrsh r1,[suzptr,#suzLinePacketBitsLeft]
+	subs r1,r1,r0
+	ble exitLineRender
+	strh r1,[suzptr,#suzLinePacketBitsLeft]
+
+#ifdef __ARM_ARCH_5TE__
+	ldrd r2,r3,[suzptr,#suzLineShiftRegCount]
+#else
+	ldr r2,[suzptr,#suzLineShiftRegCount]
+	ldr r3,[suzptr,#suzLineShiftReg]
+#endif
+	subs r2,r2,r0
+	blcc fetchNewBits
+	str r2,[suzptr,#suzLineShiftRegCount]
+	rsb r1,r0,#32
+	sub r2,r1,r2
+	mov r3,r3,lsl r2
+	mov r0,r3,lsr r1
+	.endm
+
 ;@----------------------------------------------------------------------------
 ;@suzLineGetPixel:			;@ Out r5=pixel
 	.macro suzLineGetPixel
@@ -1097,16 +1114,45 @@ fetchPacket:
 	subs r0,r0,#0x10000000
 	bcc fetchPacket
 
-fetchPixel:
 	movs r1,r0,lsl#24			;@ Check bit #0 & #7
 	strpl r0,[suzptr,#suzLineRepCountTyp]
 	beq getPixelEnd				;@ line_packed? Reuse r5.
 getRealPixel:
-	bl suzGetPixelBits
-	add r1,suzptr,#suzPenIndex
-	ldrb r5,[r1,r0]
+	ldrb r0,[suzptr,#suzSprCtl0_PixelBits]
+	suzLineGetBits
+	add r0,r0,#suzPenIndex
+	ldrb r5,[suzptr,r0]
 getPixelEnd:
 	.endm
+
+;@----------------------------------------------------------------------------
+fetchPacket:
+	mov r0,#5
+	suzLineGetBits
+	movs r0,r0,ror#4
+	beq exitLineRender
+	str r0,[suzptr,#suzLineRepCountTyp]
+	b getRealPixel
+
+;@----------------------------------------------------------------------------
+fetchNewBits:
+	stmfd sp!,{lr}
+	ldr lr,[suzptr,#suzyRAM]
+	ldrh r5,[suzptr,#suzTmpAdr]		;@ r5 is ok to use here.
+	add r2,r2,#24
+	ldrb r1,[lr,r5]!
+	orr r3,r1,r3,lsl#8
+	ldrb r1,[lr,#1]
+	orr r3,r1,r3,lsl#8
+	ldrb r1,[lr,#2]
+	add r5,r5,#3
+	orr r3,r1,r3,lsl#8
+	strh r5,[suzptr,#suzTmpAdr]
+	str r3,[suzptr,#suzLineShiftReg]
+
+	add r9,r9,#3*3				;@ 3 * SPR_RDWR_CYC
+
+	ldmfd sp!,{pc}
 
 ;@----------------------------------------------------------------------------
 suzLineRender:				;@ In r10=hSign, r6=hQuadOff, r2=vOff.
@@ -1192,54 +1238,6 @@ exitLineRender:
 	strbne r7,[suzptr,#everOnScreen]
 	ldmfd sp!,{r4-r8,r10,r11,lr}
 	bx lr
-
-;@----------------------------------------------------------------------------
-suzGetPixelBits:			;@ Out r0=bits.
-;@----------------------------------------------------------------------------
-	ldrb r0,[suzptr,#suzSprCtl0_PixelBits]
-;@----------------------------------------------------------------------------
-suzLineGetBits:				;@ In r0=bitCount, less or equal to 8, Out r0=bits.
-;@----------------------------------------------------------------------------
-	ldrsh r1,[suzptr,#suzLinePacketBitsLeft]
-	subs r1,r1,r0
-	ble exitLineRender
-	strh r1,[suzptr,#suzLinePacketBitsLeft]
-
-#ifdef __ARM_ARCH_5TE__
-	ldrd r2,r3,[suzptr,#suzLineShiftRegCount]
-#else
-	ldr r2,[suzptr,#suzLineShiftRegCount]
-	ldr r3,[suzptr,#suzLineShiftReg]
-#endif
-	subs r2,r2,r0
-	bcc fetchNewBits
-extractBits:
-	str r2,[suzptr,#suzLineShiftRegCount]
-	rsb r1,r0,#32
-	sub r2,r1,r2
-	mov r3,r3,lsl r2
-	mov r0,r3,lsr r1
-	bx lr
-
-fetchNewBits:
-	stmfd sp!,{r4}
-	ldr r4,[suzptr,#suzyRAM]
-	ldrh r5,[suzptr,#suzTmpAdr]		;@ r5 is ok to use here.
-	add r2,r2,#24
-	ldrb r1,[r4,r5]!
-	orr r3,r1,r3,lsl#8
-	ldrb r1,[r4,#1]
-	orr r3,r1,r3,lsl#8
-	ldrb r1,[r4,#2]
-	add r5,r5,#3
-	orr r3,r1,r3,lsl#8
-	strh r5,[suzptr,#suzTmpAdr]
-	str r3,[suzptr,#suzLineShiftReg]
-
-	add r9,r9,#3*3				;@ 3 * SPR_RDWR_CYC
-
-	ldmfd sp!,{r4}
-	b extractBits
 
 ;@----------------------------------------------------------------------------
 ;@ suzProcessPixel:			;@ In r4=hoff, r5=pixel
