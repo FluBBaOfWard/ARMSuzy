@@ -1136,23 +1136,22 @@ fetchPacket:
 
 ;@----------------------------------------------------------------------------
 fetchNewBits:
-	stmfd sp!,{lr}
-	ldr lr,[suzptr,#suzyRAM]
-	ldrh r5,[suzptr,#suzTmpAdr]		;@ r5 is ok to use here.
+	ldrh r1,[suzptr,#suzTmpAdr]		;@ r5 is ok to use here.
 	add r2,r2,#24
-	ldrb r1,[lr,r5]!
-	orr r3,r1,r3,lsl#8
-	ldrb r1,[lr,#1]
-	orr r3,r1,r3,lsl#8
-	ldrb r1,[lr,#2]
-	add r5,r5,#3
-	orr r3,r1,r3,lsl#8
+	add r5,r1,#3
 	strh r5,[suzptr,#suzTmpAdr]
+	ldr r5,[suzptr,#suzyRAM]
+	ldrb r1,[r5,r1]!
+	orr r3,r1,r3,lsl#8
+	ldrb r1,[r5,#1]
+	orr r3,r1,r3,lsl#8
+	ldrb r1,[r5,#2]
+	orr r3,r1,r3,lsl#8
 	str r3,[suzptr,#suzLineShiftReg]
 
 	add r9,r9,#3*3				;@ 3 * SPR_RDWR_CYC
 
-	ldmfd sp!,{pc}
+	bx lr
 
 ;@----------------------------------------------------------------------------
 suzLineRender:				;@ In r10=hSign, r6=hQuadOff, r2=vOff.
