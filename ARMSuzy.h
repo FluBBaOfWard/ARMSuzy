@@ -142,11 +142,10 @@ typedef struct {
 	u8 wsvLatchedDispCtrl;		// Latched Display Control
 	u8 sprCtl0_PixelBits;
 	u8 everOnScreen;
-	u8 sprSys_Busy;
 	u8 sprSys_UnsafeAccess;
 	u8 sprSys_Mathbit;
 	u8 sprSys_MathInProgress;
-	u8 padding2[3];
+	u8 padding2[4];
 
 	// Line rendering related variables
 	u32 lineRepCountTyp;

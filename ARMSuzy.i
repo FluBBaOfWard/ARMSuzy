@@ -154,11 +154,10 @@ suzCollision:		.byte 0		;@ Collision value for current sprite.
 wsvLatchedDispCtrl:	.byte 0		;@ Latched Display Control
 suzSprCtl0_PixelBits:	.byte 0
 everOnScreen:		.byte 0
-sprSys_Busy:		.byte 0
 sprSys_UnsafeAccess:	.byte 0
 sprSys_Mathbit:		.byte 0
 sprSys_MathInProgress:	.byte 0
-suzPadding2:		.skip 3
+suzPadding2:		.skip 4
 
 suzLineRepCountTyp:
 suzLineType:		.byte 0, 0	;@

@@ -374,7 +374,10 @@ suSprSysR:					;@ Sprite Sys (0xFC92)
 	ldrb r0,[suzptr,#suzSprSys]
 	and r0,r0,#0x1A				;@ StopOnCurrent, LeftHand & VStretch
 	ldrb r1,[suzptr,#suzSprSysStat]
-	bic r1,r1,#0x1A
+	and r1,r1,#0x04				;@ Only unsafe access yet.
+	orr r0,r0,r1
+	ldrb r1,[suzptr,#suzSprGo]
+	and r1,r1,#0x01				;@ SprGo?
 	orr r0,r0,r1
 	bx lr
 ;@----------------------------------------------------------------------------
@@ -739,19 +742,22 @@ suBusEnW:					;@ Suzy Bus Enable (0xFC90)
 ;@----------------------------------------------------------------------------
 suSprGoW:					;@ Sprite Process Start Bit (0xFC91)
 ;@----------------------------------------------------------------------------
+	ldrb r0,[suzptr,#suzSprGo]
 	strb r1,[suzptr,#suzSprGo]
-	ldrb r0,[suzptr,#suzSprSys]
-	bic r0,r0,#0x02					;@ Clear Stop on Current.
-	strb r0,[suzptr,#suzSprSys]
+	eor r0,r0,r1
+	tst r0,#1
+	ldrbne r0,[suzptr,#suzSprSys]
+	bicne r0,r0,#0x02			;@ Clear Stop on Current.
+	strbne r0,[suzptr,#suzSprSys]
 	bx lr
 ;@----------------------------------------------------------------------------
 suSprSysW:					;@ Sprite Sys (0xFC92)
 ;@----------------------------------------------------------------------------
 	tst r1,#0x04				;@ Clear UnsafeAccess bit?
 	ldrbne r0,[suzptr,#suzSprSysStat]
+	strb r1,[suzptr,#suzSprSys]
 	bicne r0,r0,#0x04
 	strbne r0,[suzptr,#suzSprSysStat]
-	strb r1,[suzptr,#suzSprSys]
 	bx lr
 
 ;@----------------------------------------------------------------------------
@@ -771,9 +777,7 @@ suzPaintSprites:			;@ Out r0=cycles used, r12=suzyptr
 	stmfd sp!,{r4-r6,r9,lr}
 	mov r9,#0						;@ CyclesUsed
 	strb r9,[suzptr,#everOnScreen]
-	mov r4,#0						;@ Sprite count
-	mov r0,#1
-	strb r0,[suzptr,#sprSys_Busy]
+	mov r4,#0						;@ Sprite count. !!! Use for remaining cycles instead?
 spriteLoop:
 	ldrb r0,[suzptr,#suzSCBNextH]
 	cmp r0,#0
@@ -824,18 +828,17 @@ skipSprite:
 	ldrb r0,[suzptr,#suzSprSys]
 	tst r0,#0x02					;@ Stop on Current?
 	bne exitPaintSprite
-	add r4,r4,#1
+	add r4,r4,#1					;@ !!! Count cycles instead?
 	cmp r4,#0x1000
 	bmi spriteLoop
 	;@ Something fishy going on...
 
 exitPaintSprite:
-	mov r0,#0
-	strb r0,[suzptr,#sprSys_Busy]
 	ldrb r0,[suzptr,#suzSprGo]
 	bic r0,r0,#1
 	strb r0,[suzptr,#suzSprGo]
 
+outOfSpriteCycles:
 	mov r0,r9
 	ldmfd sp!,{r4-r6,r9,lr}
 	bx lr
