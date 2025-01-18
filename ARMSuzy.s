@@ -767,17 +767,18 @@ suzySetButtonData:			;@ r0=buttons & switches, r12=suzptr.
 	bx lr
 
 ;@----------------------------------------------------------------------------
-suzPaintSprites:			;@ Out r0=cycles used, r12=suzyptr
+suzPaintSprites:			;@ In r0=cycles to use, r12=suzyptr, Out r0=cycles used
 ;@----------------------------------------------------------------------------
-	ldrh r0,[suzptr,#suzSuzyBusEn]
-	and r0,r0,r0,lsr#8
-	ands r0,r0,#1					;@ Is BusEnable & SprGo set?
+	ldrh r1,[suzptr,#suzSuzyBusEn]
+	and r1,r1,r1,lsr#8
+	tst r1,#1					;@ Is BusEnable & SprGo set?
+	moveq r0,#0
 	bxeq lr
 
 	stmfd sp!,{r4-r6,r9,lr}
+	mov r4,r0						;@ Remaining cycles
 	mov r9,#0						;@ CyclesUsed
 	strb r9,[suzptr,#everOnScreen]
-	mov r4,#0						;@ Sprite count. !!! Use for remaining cycles instead?
 spriteLoop:
 	ldrb r0,[suzptr,#suzSCBNextH]
 	cmp r0,#0
@@ -828,10 +829,9 @@ skipSprite:
 	ldrb r0,[suzptr,#suzSprSys]
 	tst r0,#0x02					;@ Stop on Current?
 	bne exitPaintSprite
-	add r4,r4,#1					;@ !!! Count cycles instead?
-	cmp r4,#0x1000
+	cmp r9,r4
 	bmi spriteLoop
-	;@ Something fishy going on...
+	b outOfSpriteCycles
 
 exitPaintSprite:
 	ldrb r0,[suzptr,#suzSprGo]
