@@ -769,15 +769,13 @@ suzySetButtonData:			;@ r0=buttons & switches, r12=suzptr.
 ;@----------------------------------------------------------------------------
 suzPaintSprites:			;@ In r0=cycles to use, r12=suzyptr, Out r0=cycles used
 ;@----------------------------------------------------------------------------
+	stmfd sp!,{r4-r6,r9,lr}
+	mov r9,#0					;@ CyclesUsed
 	ldrh r1,[suzptr,#suzSuzyBusEn]
 	and r1,r1,r1,lsr#8
 	tst r1,#1					;@ Is BusEnable & SprGo set?
-	moveq r0,#0
-	bxeq lr
-
-	stmfd sp!,{r4-r6,r9,lr}
-	mov r4,r0						;@ Remaining cycles
-	mov r9,#0						;@ CyclesUsed
+	beq exitPaintSprite
+	mov r4,r0					;@ Remaining cycles
 	strb r9,[suzptr,#everOnScreen]
 spriteLoop:
 	ldrb r0,[suzptr,#suzSCBNextH]
@@ -787,7 +785,7 @@ spriteLoop:
 	bl suzFetchSpriteData
 
 	ldrb r0,[suzptr,#suzSprCtl1]
-	ands r0,r0,#0x04				;@ Skip sprite?
+	ands r0,r0,#0x04			;@ Skip sprite?
 	bne skipSprite
 	strb r0,[suzptr,#suzCollision]
 
@@ -797,9 +795,9 @@ spriteLoop:
 	cmp r0,#0x10
 	bcs noSprCollWrite
 	ldrb r0,[suzptr,#suzSprCtl0]
-	ands r0,r0,#0x07				;@ Sprite Type, sprite_background_shadow
-	cmpne r0,#1						;@ sprite_background_noncollide
-	cmpne r0,#5						;@ sprite_noncollide
+	ands r0,r0,#0x07			;@ Sprite Type, sprite_background_shadow
+	cmpne r0,#1					;@ sprite_background_noncollide
+	cmpne r0,#5					;@ sprite_noncollide
 	beq noSprCollWrite
 	ldrh r0,[suzptr,#suzSCBAdr]
 	ldrh r1,[suzptr,#suzCollOff]
@@ -811,7 +809,7 @@ spriteLoop:
 noSprCollWrite:
 
 	ldrb r0,[suzptr,#suzSprGo]
-	tst r0,#0x04					;@ Everon?
+	tst r0,#0x04				;@ Everon?
 	beq skipSprite
 	ldrh r0,[suzptr,#suzSCBAdr]
 	ldrh r1,[suzptr,#suzCollOff]
@@ -827,7 +825,7 @@ noSprCollWrite:
 
 skipSprite:
 	ldrb r0,[suzptr,#suzSprSys]
-	tst r0,#0x02					;@ Stop on Current?
+	tst r0,#0x02				;@ Stop on Current?
 	bne exitPaintSprite
 	cmp r9,r4
 	bmi spriteLoop
@@ -837,6 +835,7 @@ exitPaintSprite:
 	ldrb r0,[suzptr,#suzSprGo]
 	bic r0,r0,#1
 	strb r0,[suzptr,#suzSprGo]
+	bl mikWakeCPU
 
 outOfSpriteCycles:
 	mov r0,r9
@@ -1139,7 +1138,7 @@ fetchPacket:
 
 ;@----------------------------------------------------------------------------
 fetchNewBits:
-	ldrh r1,[suzptr,#suzTmpAdr]		;@ r5 is ok to use here.
+	ldrh r1,[suzptr,#suzTmpAdr]	;@ r5 is ok to use here.
 	add r2,r2,#24
 	add r5,r1,#3
 	strh r5,[suzptr,#suzTmpAdr]
