@@ -139,7 +139,7 @@ typedef struct {
 //------------------------------
 	u8 sprSysStat;		// 0x92 System Control, read.
 	u8 collision;		// Collision value for current sprite.
-	u8 wsvLatchedDispCtrl;		// Latched Display Control
+	u8 soc;				// Revision of Suzy
 	u8 sprCtl0_PixelBits;
 	u8 everOnScreen;
 	u8 sprSys_UnsafeAccess;

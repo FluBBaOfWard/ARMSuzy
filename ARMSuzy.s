@@ -40,9 +40,9 @@ suzyInit:					;@ Only need to be called once
 ;@----------------------------------------------------------------------------
 	bx lr
 ;@----------------------------------------------------------------------------
-suzyReset:					;@ r0=ram, r12=suzptr
+suzyReset:					;@ r0=ram, r1=soc, r12=suzptr
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{r0,lr}
+	stmfd sp!,{r0,r1,lr}
 
 	mov r0,suzptr
 	ldr r1,=suzySize/4
@@ -65,9 +65,10 @@ suzyReset:					;@ r0=ram, r12=suzptr
 	str r0,[suzptr,#mathAB_sign]
 	str r0,[suzptr,#mathCD_sign]
 
-	ldmfd sp!,{r0,lr}
+	ldmfd sp!,{r0,r1,lr}
 
 	str r0,[suzptr,#suzyRAM]
+	strb r1,[suzptr,#suzSOC]
 
 	bx lr
 
@@ -366,7 +367,10 @@ suRegR:
 ;@----------------------------------------------------------------------------
 suHRevR:					;@ Suzy HW Revision (0xFC88)
 ;@----------------------------------------------------------------------------
-	mov r0,#1					;@ Revision 1
+	ldrb r0,[suzptr,#suzSOC]
+	cmp r0,#SOC_HOWARD
+	moveq r0,#1					;@ Revision 1
+	movne r0,#2					;@ Revision 2
 	bx lr
 ;@----------------------------------------------------------------------------
 suSprSysR:					;@ Sprite Sys (0xFC92)

@@ -151,7 +151,7 @@ suzPadding:			.skip 3
 ;@----------------------------------------------------------------------------
 suzSprSysStat:		.byte 0		;@ 0x92 System Control, read.
 suzCollision:		.byte 0		;@ Collision value for current sprite.
-wsvLatchedDispCtrl:	.byte 0		;@ Latched Display Control
+suzSOC:				.byte 0		;@ Revision of Suzy
 suzSprCtl0_PixelBits:	.byte 0
 everOnScreen:		.byte 0
 sprSys_UnsafeAccess:	.byte 0
