@@ -83,9 +83,19 @@ _debugIOUnimplR:
 	ldr r3,=debugIOUnimplR
 	bx r3
 ;@----------------------------------------------------------------------------
+_debugIOMirroredR:
+;@----------------------------------------------------------------------------
+	ldr r3,=debugIOMirroredR
+	bx r3
+;@----------------------------------------------------------------------------
 _debugIOUnmappedW:
 ;@----------------------------------------------------------------------------
 	ldr r3,=debugIOUnmappedW
+	bx r3
+;@----------------------------------------------------------------------------
+_debugIOMirroredW:
+;@----------------------------------------------------------------------------
+	ldr r3,=debugIOMirroredW
 	bx r3
 ;@----------------------------------------------------------------------------
 memCopy:
@@ -131,6 +141,16 @@ suzyGetStateSize:			;@ Out r0=state size.
 	mov r0,#suzyStateEnd-suzyState
 	bx lr
 
+;@----------------------------------------------------------------------------
+suRegMirR:
+;@----------------------------------------------------------------------------
+	and r2,r2,#0x3F
+	cmp r2,#0x30
+	biccs r2,r2,#0x20
+	stmfd sp!,{r2,suzptr,lr}
+	bl _debugIOMirroredR
+	ldmfd sp!,{r2,suzptr,lr}
+	orr r0,r2,#0xFC00
 ;@----------------------------------------------------------------------------
 suzyRead:					;@ I/O read (0xFC00-0xFCC5)
 ;@----------------------------------------------------------------------------
@@ -187,86 +207,86 @@ io_read_tbl:
 	.long suRegR				;@ 0xFC2D SCBADRH
 	.long suRegR				;@ 0xFC2E PROCADRL
 	.long suRegR				;@ 0xFC2F PROCADRH
-	.long suUnmappedR			;@ 0xFC30
-	.long suUnmappedR			;@ 0xFC31
-	.long suUnmappedR			;@ 0xFC32
-	.long suUnmappedR			;@ 0xFC33
-	.long suUnmappedR			;@ 0xFC34
-	.long suUnmappedR			;@ 0xFC35
-	.long suUnmappedR			;@ 0xFC36
-	.long suUnmappedR			;@ 0xFC37
-	.long suUnmappedR			;@ 0xFC38
-	.long suUnmappedR			;@ 0xFC39
-	.long suUnmappedR			;@ 0xFC3A
-	.long suUnmappedR			;@ 0xFC3B
-	.long suUnmappedR			;@ 0xFC3C
-	.long suUnmappedR			;@ 0xFC3D
-	.long suUnmappedR			;@ 0xFC3E
-	.long suUnmappedR			;@ 0xFC3F
-	.long suUnmappedR			;@ 0xFC40
-	.long suUnmappedR			;@ 0xFC41
-	.long suUnmappedR			;@ 0xFC42
-	.long suUnmappedR			;@ 0xFC43
-	.long suUnmappedR			;@ 0xFC44
-	.long suUnmappedR			;@ 0xFC45
-	.long suUnmappedR			;@ 0xFC46
-	.long suUnmappedR			;@ 0xFC47
-	.long suUnmappedR			;@ 0xFC48
-	.long suUnmappedR			;@ 0xFC49
-	.long suUnmappedR			;@ 0xFC4A
-	.long suUnmappedR			;@ 0xFC4B
-	.long suUnmappedR			;@ 0xFC4C
-	.long suUnmappedR			;@ 0xFC4D
-	.long suUnmappedR			;@ 0xFC4E
-	.long suUnmappedR			;@ 0xFC4F
-	.long suUnmappedR			;@ 0xFC50
-	.long suUnmappedR			;@ 0xFC51
+	.long suRegMirR				;@ 0xFC30 Mirror of 0xFC10
+	.long suRegMirR				;@ 0xFC31 Mirror of 0xFC11
+	.long suRegMirR				;@ 0xFC32 Mirror of 0xFC12
+	.long suRegMirR				;@ 0xFC33 Mirror of 0xFC13
+	.long suRegMirR				;@ 0xFC34 Mirror of 0xFC14
+	.long suRegMirR				;@ 0xFC35 Mirror of 0xFC15
+	.long suRegMirR				;@ 0xFC36 Mirror of 0xFC16
+	.long suRegMirR				;@ 0xFC37 Mirror of 0xFC17
+	.long suRegMirR				;@ 0xFC38 Mirror of 0xFC18
+	.long suRegMirR				;@ 0xFC39 Mirror of 0xFC19
+	.long suRegMirR				;@ 0xFC3A Mirror of 0xFC1A
+	.long suRegMirR				;@ 0xFC3B Mirror of 0xFC1B
+	.long suRegMirR				;@ 0xFC3C Mirror of 0xFC1C
+	.long suRegMirR				;@ 0xFC3D Mirror of 0xFC1D
+	.long suRegMirR				;@ 0xFC3E Mirror of 0xFC1E
+	.long suRegMirR				;@ 0xFC3F Mirror of 0xFC1F
+	.long suRegMirR				;@ 0xFC40 Mirror of 0xFC00
+	.long suRegMirR				;@ 0xFC41 Mirror of 0xFC01
+	.long suRegMirR				;@ 0xFC42 Mirror of 0xFC02
+	.long suRegMirR				;@ 0xFC43 Mirror of 0xFC03
+	.long suRegMirR				;@ 0xFC44 Mirror of 0xFC04
+	.long suRegMirR				;@ 0xFC45 Mirror of 0xFC05
+	.long suRegMirR				;@ 0xFC46 Mirror of 0xFC06
+	.long suRegMirR				;@ 0xFC47 Mirror of 0xFC07
+	.long suRegMirR				;@ 0xFC48 Mirror of 0xFC08
+	.long suRegMirR				;@ 0xFC49 Mirror of 0xFC09
+	.long suRegMirR				;@ 0xFC4A Mirror of 0xFC0A
+	.long suRegMirR				;@ 0xFC4B Mirror of 0xFC0B
+	.long suRegMirR				;@ 0xFC4C Mirror of 0xFC0C
+	.long suRegMirR				;@ 0xFC4D Mirror of 0xFC0D
+	.long suRegMirR				;@ 0xFC4E Mirror of 0xFC0E
+	.long suRegMirR				;@ 0xFC4F Mirror of 0xFC0F
+	.long suRegMirR				;@ 0xFC50 Mirror of 0xFC10
+	.long suRegMirR				;@ 0xFC51 Mirror of 0xFC11
 	.long suRegR				;@ 0xFC52 MATHD
 	.long suRegR				;@ 0xFC53 MATHC
 	.long suRegR				;@ 0xFC54 MATHB
 	.long suRegR				;@ 0xFC55 MATHA
 	.long suRegR				;@ 0xFC56 MATHP
 	.long suRegR				;@ 0xFC57 MATHN
-	.long suUnmappedR			;@ 0xFC58
-	.long suUnmappedR			;@ 0xFC59
-	.long suUnmappedR			;@ 0xFC5A
-	.long suUnmappedR			;@ 0xFC5B
-	.long suUnmappedR			;@ 0xFC5C
-	.long suUnmappedR			;@ 0xFC5D
-	.long suUnmappedR			;@ 0xFC5E
-	.long suUnmappedR			;@ 0xFC5F
+	.long suRegMirR				;@ 0xFC58 Mirror of 0xFC18
+	.long suRegMirR				;@ 0xFC59 Mirror of 0xFC19
+	.long suRegMirR				;@ 0xFC5A Mirror of 0xFC1A
+	.long suRegMirR				;@ 0xFC5B Mirror of 0xFC1B
+	.long suRegMirR				;@ 0xFC5C Mirror of 0xFC1C
+	.long suRegMirR				;@ 0xFC5D Mirror of 0xFC1D
+	.long suRegMirR				;@ 0xFC5E Mirror of 0xFC1E
+	.long suRegMirR				;@ 0xFC5F Mirror of 0xFC1F
 	.long suRegR				;@ 0xFC60 MATHH
 	.long suRegR				;@ 0xFC61 MATHG
 	.long suRegR				;@ 0xFC62 MATHF
 	.long suRegR				;@ 0xFC63 MATHE
-	.long suUnmappedR			;@ 0xFC64
-	.long suUnmappedR			;@ 0xFC65
-	.long suUnmappedR			;@ 0xFC66
-	.long suUnmappedR			;@ 0xFC67
-	.long suUnmappedR			;@ 0xFC68
-	.long suUnmappedR			;@ 0xFC69
-	.long suUnmappedR			;@ 0xFC6A
-	.long suUnmappedR			;@ 0xFC6B
+	.long suRegMirR				;@ 0xFC64 Mirror of 0xFC24
+	.long suRegMirR				;@ 0xFC65 Mirror of 0xFC25
+	.long suRegMirR				;@ 0xFC66 Mirror of 0xFC26
+	.long suRegMirR				;@ 0xFC67 Mirror of 0xFC27
+	.long suRegMirR				;@ 0xFC68 Mirror of 0xFC28
+	.long suRegMirR				;@ 0xFC69 Mirror of 0xFC29
+	.long suRegMirR				;@ 0xFC6A Mirror of 0xFC2A
+	.long suRegMirR				;@ 0xFC6B Mirror of 0xFC2B
 	.long suRegR				;@ 0xFC6C MATHM
 	.long suRegR				;@ 0xFC6D MATHL
 	.long suRegR				;@ 0xFC6E MATHK
 	.long suRegR				;@ 0xFC6F MATHJ
-	.long suUnmappedR			;@ 0xFC70
-	.long suUnmappedR			;@ 0xFC71
-	.long suUnmappedR			;@ 0xFC72
-	.long suUnmappedR			;@ 0xFC73
-	.long suUnmappedR			;@ 0xFC74
-	.long suUnmappedR			;@ 0xFC75
-	.long suUnmappedR			;@ 0xFC76
-	.long suUnmappedR			;@ 0xFC77
-	.long suUnmappedR			;@ 0xFC78
-	.long suUnmappedR			;@ 0xFC79
-	.long suUnmappedR			;@ 0xFC7A
-	.long suUnmappedR			;@ 0xFC7B
-	.long suUnmappedR			;@ 0xFC7C
-	.long suUnmappedR			;@ 0xFC7D
-	.long suUnmappedR			;@ 0xFC7E
-	.long suUnmappedR			;@ 0xFC7F
+	.long suRegMirR				;@ 0xFC70 Mirror of 0xFC10
+	.long suRegMirR				;@ 0xFC71 Mirror of 0xFC11
+	.long suRegMirR				;@ 0xFC72 Mirror of 0xFC12
+	.long suRegMirR				;@ 0xFC73 Mirror of 0xFC13
+	.long suRegMirR				;@ 0xFC74 Mirror of 0xFC14
+	.long suRegMirR				;@ 0xFC75 Mirror of 0xFC15
+	.long suRegMirR				;@ 0xFC76 Mirror of 0xFC16
+	.long suRegMirR				;@ 0xFC77 Mirror of 0xFC17
+	.long suRegMirR				;@ 0xFC78 Mirror of 0xFC18
+	.long suRegMirR				;@ 0xFC79 Mirror of 0xFC19
+	.long suRegMirR				;@ 0xFC7A Mirror of 0xFC1A
+	.long suRegMirR				;@ 0xFC7B Mirror of 0xFC1B
+	.long suRegMirR				;@ 0xFC7C Mirror of 0xFC1C
+	.long suRegMirR				;@ 0xFC7D Mirror of 0xFC1D
+	.long suRegMirR				;@ 0xFC7E Mirror of 0xFC1E
+	.long suRegMirR				;@ 0xFC7F Mirror of 0xFC1F
 	.long suWriteOnlyR			;@ 0xFC80 SPRCTL0
 	.long suWriteOnlyR			;@ 0xFC81 SPRCTL1
 	.long suWriteOnlyR			;@ 0xFC82 SPRCOLL
@@ -350,10 +370,6 @@ suUnmappedR:
 	mov r0,#0x00
 	bx lr
 ;@----------------------------------------------------------------------------
-suUnknownR:
-;@----------------------------------------------------------------------------
-	ldr r1,=0x826EBAD0
-;@----------------------------------------------------------------------------
 suImportantR:
 	mov r11,r11					;@ No$GBA breakpoint
 	stmfd sp!,{r2,suzptr,lr}
@@ -399,6 +415,16 @@ suJoystickR:				;@ Suzy Joystick (0xFCB0)
 joyFlipTbl:
 	.byte 0x0, 0x2, 0x1, 0x3, 0x8, 0xA, 0x9, 0xB
 	.byte 0x4, 0x6, 0x5, 0x7, 0xC, 0xE, 0xD, 0xF
+;@----------------------------------------------------------------------------
+suRegMirW:
+;@----------------------------------------------------------------------------
+	and r2,r2,#0x3F
+	cmp r2,#0x30
+	biccs r2,r2,#0x20
+	stmfd sp!,{r1,r2,suzptr,lr}
+	bl _debugIOMirroredW
+	ldmfd sp!,{r1,r2,suzptr,lr}
+	orr r0,r2,#0xFC00
 ;@----------------------------------------------------------------------------
 suzyWrite:					;@ I/O write (0xFC00-0xFCC5)
 ;@----------------------------------------------------------------------------
@@ -455,86 +481,86 @@ io_write_tbl:
 	.long suRegW				;@ 0xFC2D SCBADRH
 	.long suRegLW				;@ 0xFC2E PROCADRL
 	.long suRegW				;@ 0xFC2F PROCADRH
-	.long suUnmappedW			;@ 0xFC30
-	.long suUnmappedW			;@ 0xFC31
-	.long suUnmappedW			;@ 0xFC32
-	.long suUnmappedW			;@ 0xFC33
-	.long suUnmappedW			;@ 0xFC34
-	.long suUnmappedW			;@ 0xFC35
-	.long suUnmappedW			;@ 0xFC36
-	.long suUnmappedW			;@ 0xFC37
-	.long suUnmappedW			;@ 0xFC38
-	.long suUnmappedW			;@ 0xFC39
-	.long suUnmappedW			;@ 0xFC3A
-	.long suUnmappedW			;@ 0xFC3B
-	.long suUnmappedW			;@ 0xFC3C
-	.long suUnmappedW			;@ 0xFC3D
-	.long suUnmappedW			;@ 0xFC3E
-	.long suUnmappedW			;@ 0xFC3F
-	.long suUnmappedW			;@ 0xFC40
-	.long suUnmappedW			;@ 0xFC41
-	.long suUnmappedW			;@ 0xFC42
-	.long suUnmappedW			;@ 0xFC43
-	.long suUnmappedW			;@ 0xFC44
-	.long suUnmappedW			;@ 0xFC45
-	.long suUnmappedW			;@ 0xFC46
-	.long suUnmappedW			;@ 0xFC47
-	.long suUnmappedW			;@ 0xFC48
-	.long suUnmappedW			;@ 0xFC49
-	.long suUnmappedW			;@ 0xFC4A
-	.long suUnmappedW			;@ 0xFC4B
-	.long suUnmappedW			;@ 0xFC4C
-	.long suUnmappedW			;@ 0xFC4D
-	.long suUnmappedW			;@ 0xFC4E
-	.long suUnmappedW			;@ 0xFC4F
-	.long suUnmappedW			;@ 0xFC50
-	.long suUnmappedW			;@ 0xFC51
+	.long suRegMirW				;@ 0xFC30 Mirror of 0xFC10
+	.long suRegMirW				;@ 0xFC31 Mirror of 0xFC11
+	.long suRegMirW				;@ 0xFC32 Mirror of 0xFC12
+	.long suRegMirW				;@ 0xFC33 Mirror of 0xFC13
+	.long suRegMirW				;@ 0xFC34 Mirror of 0xFC14
+	.long suRegMirW				;@ 0xFC35 Mirror of 0xFC15
+	.long suRegMirW				;@ 0xFC36 Mirror of 0xFC16
+	.long suRegMirW				;@ 0xFC37 Mirror of 0xFC17
+	.long suRegMirW				;@ 0xFC38 Mirror of 0xFC18
+	.long suRegMirW				;@ 0xFC39 Mirror of 0xFC19
+	.long suRegMirW				;@ 0xFC3A Mirror of 0xFC1A
+	.long suRegMirW				;@ 0xFC3B Mirror of 0xFC1B
+	.long suRegMirW				;@ 0xFC3C Mirror of 0xFC1C
+	.long suRegMirW				;@ 0xFC3D Mirror of 0xFC1D
+	.long suRegMirW				;@ 0xFC3E Mirror of 0xFC1E
+	.long suRegMirW				;@ 0xFC3F Mirror of 0xFC1F
+	.long suRegMirW				;@ 0xFC40 Mirror of 0xFC00
+	.long suRegMirW				;@ 0xFC41 Mirror of 0xFC01
+	.long suRegMirW				;@ 0xFC42 Mirror of 0xFC02
+	.long suRegMirW				;@ 0xFC43 Mirror of 0xFC03
+	.long suRegMirW				;@ 0xFC44 Mirror of 0xFC04
+	.long suRegMirW				;@ 0xFC45 Mirror of 0xFC05
+	.long suRegMirW				;@ 0xFC46 Mirror of 0xFC06
+	.long suRegMirW				;@ 0xFC47 Mirror of 0xFC07
+	.long suRegMirW				;@ 0xFC48 Mirror of 0xFC08
+	.long suRegMirW				;@ 0xFC49 Mirror of 0xFC09
+	.long suRegMirW				;@ 0xFC4A Mirror of 0xFC0A
+	.long suRegMirW				;@ 0xFC4B Mirror of 0xFC0B
+	.long suRegMirW				;@ 0xFC4C Mirror of 0xFC0C
+	.long suRegMirW				;@ 0xFC4D Mirror of 0xFC0D
+	.long suRegMirW				;@ 0xFC4E Mirror of 0xFC0E
+	.long suRegMirW				;@ 0xFC4F Mirror of 0xFC0F
+	.long suRegMirW				;@ 0xFC50 Mirror of 0xFC10
+	.long suRegMirW				;@ 0xFC51 Mirror of 0xFC11
 	.long suMathDW				;@ 0xFC52 MATHD
 	.long suMathCW				;@ 0xFC53 MATHC
 	.long suRegLW				;@ 0xFC54 MATHB
 	.long suMathAW				;@ 0xFC55 MATHA
 	.long suRegLW				;@ 0xFC56 MATHP
 	.long suRegW				;@ 0xFC57 MATHN
-	.long suUnmappedW			;@ 0xFC58
-	.long suUnmappedW			;@ 0xFC59
-	.long suUnmappedW			;@ 0xFC5A
-	.long suUnmappedW			;@ 0xFC5B
-	.long suUnmappedW			;@ 0xFC5C
-	.long suUnmappedW			;@ 0xFC5D
-	.long suUnmappedW			;@ 0xFC5E
-	.long suUnmappedW			;@ 0xFC5F
+	.long suRegMirW				;@ 0xFC58 Mirror of 0xFC18
+	.long suRegMirW				;@ 0xFC59 Mirror of 0xFC19
+	.long suRegMirW				;@ 0xFC5A Mirror of 0xFC1A
+	.long suRegMirW				;@ 0xFC5B Mirror of 0xFC1B
+	.long suRegMirW				;@ 0xFC5C Mirror of 0xFC1C
+	.long suRegMirW				;@ 0xFC5D Mirror of 0xFC1D
+	.long suRegMirW				;@ 0xFC5E Mirror of 0xFC1E
+	.long suRegMirW				;@ 0xFC5F Mirror of 0xFC1F
 	.long suRegLW				;@ 0xFC60 MATHH
 	.long suRegW				;@ 0xFC61 MATHG
 	.long suRegLW				;@ 0xFC62 MATHF
 	.long suMathEW				;@ 0xFC63 MATHE
-	.long suUnmappedW			;@ 0xFC64
-	.long suUnmappedW			;@ 0xFC65
-	.long suUnmappedW			;@ 0xFC66
-	.long suUnmappedW			;@ 0xFC67
-	.long suUnmappedW			;@ 0xFC68
-	.long suUnmappedW			;@ 0xFC69
-	.long suUnmappedW			;@ 0xFC6A
-	.long suUnmappedW			;@ 0xFC6B
+	.long suRegMirW				;@ 0xFC64 Mirror of 0xFC24
+	.long suRegMirW				;@ 0xFC65 Mirror of 0xFC25
+	.long suRegMirW				;@ 0xFC66 Mirror of 0xFC26
+	.long suRegMirW				;@ 0xFC67 Mirror of 0xFC27
+	.long suRegMirW				;@ 0xFC68 Mirror of 0xFC28
+	.long suRegMirW				;@ 0xFC69 Mirror of 0xFC29
+	.long suRegMirW				;@ 0xFC6A Mirror of 0xFC2A
+	.long suRegMirW				;@ 0xFC6B Mirror of 0xFC2B
 	.long suRegLW				;@ 0xFC6C MATHM
 	.long suRegW				;@ 0xFC6D MATHL
 	.long suRegLW				;@ 0xFC6E MATHK
 	.long suRegW				;@ 0xFC6F MATHJ
-	.long suUnmappedW			;@ 0xFC70
-	.long suUnmappedW			;@ 0xFC71
-	.long suUnmappedW			;@ 0xFC72
-	.long suUnmappedW			;@ 0xFC73
-	.long suUnmappedW			;@ 0xFC74
-	.long suUnmappedW			;@ 0xFC75
-	.long suUnmappedW			;@ 0xFC76
-	.long suUnmappedW			;@ 0xFC77
-	.long suUnmappedW			;@ 0xFC78
-	.long suUnmappedW			;@ 0xFC79
-	.long suUnmappedW			;@ 0xFC7A
-	.long suUnmappedW			;@ 0xFC7B
-	.long suUnmappedW			;@ 0xFC7C
-	.long suUnmappedW			;@ 0xFC7D
-	.long suUnmappedW			;@ 0xFC7E
-	.long suUnmappedW			;@ 0xFC7F
+	.long suRegMirW				;@ 0xFC70 Mirror of 0xFC10
+	.long suRegMirW				;@ 0xFC71 Mirror of 0xFC11
+	.long suRegMirW				;@ 0xFC72 Mirror of 0xFC12
+	.long suRegMirW				;@ 0xFC73 Mirror of 0xFC13
+	.long suRegMirW				;@ 0xFC74 Mirror of 0xFC14
+	.long suRegMirW				;@ 0xFC75 Mirror of 0xFC15
+	.long suRegMirW				;@ 0xFC76 Mirror of 0xFC16
+	.long suRegMirW				;@ 0xFC77 Mirror of 0xFC17
+	.long suRegMirW				;@ 0xFC78 Mirror of 0xFC18
+	.long suRegMirW				;@ 0xFC79 Mirror of 0xFC19
+	.long suRegMirW				;@ 0xFC7A Mirror of 0xFC1A
+	.long suRegMirW				;@ 0xFC7B Mirror of 0xFC1B
+	.long suRegMirW				;@ 0xFC7C Mirror of 0xFC1C
+	.long suRegMirW				;@ 0xFC7D Mirror of 0xFC1D
+	.long suRegMirW				;@ 0xFC7E Mirror of 0xFC1E
+	.long suRegMirW				;@ 0xFC7F Mirror of 0xFC1F
 	.long suSprCtl0W			;@ 0xFC80 SPRCTL0
 	.long suRegW				;@ 0xFC81 SPRCTL1
 	.long suSprCollW			;@ 0xFC82 SPRCOLL
