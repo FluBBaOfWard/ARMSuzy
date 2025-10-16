@@ -163,7 +163,7 @@ suzLineRepCountTyp:
 suzLineType:		.byte 0, 0	;@
 suzLineRepeatCount:	.short 0	;@
 suzLinePacketBitsLeft:	.long 0	;@
-suzLineShiftRegCount:	.long 0	;@
+suzLineShiftRegCount:	.long 0	;@ Unused now
 suzLineShiftReg:	.long 0		;@ Unused now
 
 suzPenIndex:		.space 16	;@

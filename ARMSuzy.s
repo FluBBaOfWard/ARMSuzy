@@ -1118,17 +1118,10 @@ checkVBail:
 ;@suzLineGetBits:			;@ In r0=bitCount, 1 to 5, Out r0=bits.
 	.macro suzLineGetBits
 ;@----------------------------------------------------------------------------
-	ldrsh r1,[suzptr,#suzLinePacketBitsLeft]
-	subs r1,r1,r0
-	ble exitLineRender
-	strh r1,[suzptr,#suzLinePacketBitsLeft]
-
-	ldr r2,[suzptr,#suzLineShiftRegCount]
-	subs r2,r2,r0
-	blcc fetchNewBits
-	str r2,[suzptr,#suzLineShiftRegCount]
+	subs r10,r10,r0
+	blle fetchNewBits
 	rsb r1,r0,#32
-	add r2,r2,r0
+	add r2,r10,r0
 	mov r0,r3,ror r2
 	mov r0,r0,lsr r1
 	.endm
@@ -1136,18 +1129,10 @@ checkVBail:
 ;@suzLineGetBits5:			;@ Out r0=bits.
 	.macro suzLineGetBits5
 ;@----------------------------------------------------------------------------
-	ldrsh r1,[suzptr,#suzLinePacketBitsLeft]
-	subs r1,r1,#5
-	ble exitLineRender
-	strh r1,[suzptr,#suzLinePacketBitsLeft]
-
-	ldr r2,[suzptr,#suzLineShiftRegCount]
-	subs r2,r2,#5
-	blcc fetchNewBits
-	str r2,[suzptr,#suzLineShiftRegCount]
-	add r2,r2,#5
-	mov r0,r3,ror r2
-	mov r0,r0,lsr#32-5
+	subs r10,r10,#5
+	blle fetchNewBits
+	mov r0,r3,ror r10
+	and r0,r0,#0x1f
 	.endm
 
 ;@----------------------------------------------------------------------------
@@ -1178,22 +1163,37 @@ fetchPacket:
 	b getRealPixel
 
 ;@----------------------------------------------------------------------------
-fetchNewBits:
-	ldrh r1,[suzptr,#suzTmpAdr]	;@ r5 is ok to use here.
-	add r2,r2,#24
-	add r5,r1,#3
+fetchNewBits:	;@ r5 is ok to use here.
+	mov r2,#3
+	ldrh r1,[suzptr,#suzLinePacketBitsLeft]
+	subs r1,r1,r2
+	bcc fetchNewBits2
+newBitsRet:
+	strh r1,[suzptr,#suzLinePacketBitsLeft]
+
+	ldrh r1,[suzptr,#suzTmpAdr]
+	add r10,r10,r2,lsl#3
+	add r5,r1,r2
 	strh r5,[suzptr,#suzTmpAdr]
+	add r9,r9,r2
+	add r9,r9,r2,lsl#1			;@ r2 * SPR_RDWR_CYC
 	ldr r5,[suzptr,#suzyRAM]
 	ldrb r1,[r5,r1]!
 	orr r3,r1,r3,lsl#8
-	ldrb r1,[r5,#1]
-	orr r3,r1,r3,lsl#8
-	ldrb r1,[r5,#2]
-	orr r3,r1,r3,lsl#8
-
-	add r9,r9,#3*3				;@ 3 * SPR_RDWR_CYC
+	cmp r2,#2
+	ldrbpl r1,[r5,#1]
+	orrpl r3,r1,r3,lsl#8
+	ldrbhi r1,[r5,#2]
+	orrhi r3,r1,r3,lsl#8
 
 	bx lr
+
+;@----------------------------------------------------------------------------
+fetchNewBits2:
+	adds r2,r2,r1
+	beq exitLineRender
+	mov r1,#0
+	b newBitsRet
 
 ;@----------------------------------------------------------------------------
 suzLineRender:				;@ In r10=hSign, r6=hQuadOff, r2=vOff.
@@ -1234,9 +1234,8 @@ suzLineRender:				;@ In r10=hSign, r6=hQuadOff, r2=vOff.
 	ldrb r2,[suzptr,#suzSprDOff]
 	add r5,r5,#1
 	strh r5,[suzptr,#suzTmpAdr]
-	sub r5,r2,#1
-	mov r5,r5,lsl#3
-	strh r5,[suzptr,#suzLinePacketBitsLeft]
+	sub r2,r2,#1
+	strh r2,[suzptr,#suzLinePacketBitsLeft]
 
 	add r9,r9,#3				;@ SPR_RDWR_CYC
 
@@ -1248,7 +1247,8 @@ suzLineRender:				;@ In r10=hSign, r6=hQuadOff, r2=vOff.
 	ldr r11,[suzptr,#suzSprTypeFunc]
 	ldrb r7,[suzptr,#suzSprColl]
 	mov r7,r7,lsl#24			;@ Bottom part is "onScreen", top is suzSprColl
-	strh r7,[suzptr,#suzLineShiftRegCount]
+//	strh r7,[suzptr,#suzLineShiftRegCount]
+	mov r10,#0					;@ r10=suzLineShiftRegCount
 	mov r3,#0					;@ r3=suzLineShiftReg in horizontalLoop.
 ;@------------------------------------
 horizontalLoop:
