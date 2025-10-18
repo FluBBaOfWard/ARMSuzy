@@ -159,9 +159,12 @@ sprSys_Mathbit:		.byte 0
 sprSys_MathInProgress:	.byte 0
 suzPadding2:		.skip 4
 
-suzLineRepCountTyp:
-suzLineType:		.byte 0, 0	;@
-suzLineRepeatCount:	.short 0	;@
+suzLineRepCountTyp:				;@ Unused now
+suzLineType:		.byte 0
+suzLineEverOn:		.byte 0
+suzLineCollValue:	.byte 0	;@
+suzLineRepeatCount:	.byte 0	;@
+
 suzLinePacketBitsLeft:	.long 0	;@
 suzLineShiftRegCount:	.long 0	;@ Unused now
 suzLineShiftReg:	.long 0		;@ Unused now

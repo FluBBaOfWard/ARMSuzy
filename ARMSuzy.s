@@ -1132,19 +1132,20 @@ checkVBail:
 	subs r10,r10,#5
 	blle fetchNewBits
 	mov r0,r3,ror r10
-	and r0,r0,#0x1f
+	ands r0,r0,#0x1f
 	.endm
 
 ;@----------------------------------------------------------------------------
 ;@suzLineGetPixel:			;@ Out r5=pixel
 	.macro suzLineGetPixel
 ;@----------------------------------------------------------------------------
-	ldr r0,[suzptr,#suzLineRepCountTyp]
-	subs r0,r0,#0x10000000
+//	ldr r0,[suzptr,#suzLineRepCountTyp]
+	subs r0,r7,#0x10000000
 	bcc fetchPacket
 
 	movs r1,r0,lsl#24			;@ Check bit #0 & #7
-	strpl r0,[suzptr,#suzLineRepCountTyp]
+	movpl r7,r0
+//	strpl r0,[suzptr,#suzLineRepCountTyp]
 	beq getPixelEnd				;@ line_packed? Reuse r5.
 getRealPixel:
 	ldrb r0,[suzptr,#suzSprCtl0_PixelBits]
@@ -1157,9 +1158,11 @@ getPixelEnd:
 ;@----------------------------------------------------------------------------
 fetchPacket:
 	suzLineGetBits5
-	movs r0,r0,ror#4
+//	movs r0,r0,ror#4
 	beq exitLineRender
-	str r0,[suzptr,#suzLineRepCountTyp]
+	bic r7,r7,#1
+	orr r7,r7,r0,ror#4
+//	str r0,[suzptr,#suzLineRepCountTyp]
 	b getRealPixel
 
 ;@----------------------------------------------------------------------------
@@ -1220,14 +1223,14 @@ suzLineRender:				;@ In r10=hSign, r6=hQuadOff, r2=vOff.
 	orr r6,r6,r0,lsl#16
 
 	ldr r0,[suzptr,#suzVidBas]	;@ Also suzCollBas
-	ldr r7,[suzptr,#suzyRAM]
+	ldr r1,[suzptr,#suzyRAM]
 	mov r8,r0,lsl#16
 	add r2,r2,r2,lsl#2			;@ *5
 	add r8,r8,r2,lsl#4+16		;@ *16
-	add r8,r7,r8,lsr#16
+	add r8,r1,r8,lsr#16
 //	str r8,[suzptr,#suzLineBaseAddress]
 	add r0,r0,r2,lsl#4+16		;@ *16
-	add r0,r7,r0,lsr#16
+	add r0,r1,r0,lsr#16
 	str r0,[suzptr,#suzLineCollisionAddress]
 
 	ldrh r5,[suzptr,#suzSprDLine]
@@ -1239,15 +1242,13 @@ suzLineRender:				;@ In r10=hSign, r6=hQuadOff, r2=vOff.
 
 	add r9,r9,#3				;@ SPR_RDWR_CYC
 
-	ldrb r0,[suzptr,#suzSprCtl1]
-	ands r0,r0,#0x80			;@ Literal -> line_abs_literal
-	orrne r0,r0,#0x70000000		;@ Not actually counted
-	str r0,[suzptr,#suzLineRepCountTyp]
+	ldrb r7,[suzptr,#suzSprCtl1];@ r7=suzLineRepCountTyp
+	ands r7,r7,#0x80			;@ Literal -> line_abs_literal
+	orrne r7,r7,#0x70000000		;@ Not actually counted
 
+	ldrb r0,[suzptr,#suzSprColl]
+	orr r7,r7,r0,lsl#16			;@ Bit#8 is "onScreen", bit#16-#19 is suzSprColl
 	ldr r11,[suzptr,#suzSprTypeFunc]
-	ldrb r7,[suzptr,#suzSprColl]
-	mov r7,r7,lsl#24			;@ Bottom part is "onScreen", top is suzSprColl
-//	strh r7,[suzptr,#suzLineShiftRegCount]
 	mov r10,#0					;@ r10=suzLineShiftRegCount
 	mov r3,#0					;@ r3=suzLineShiftReg in horizontalLoop.
 ;@------------------------------------
@@ -1266,7 +1267,7 @@ rendLoop:
 	mov lr,pc
 	bx r11						;@ ProcessPixel(hOff, pix)
 #endif
-	orr r7,r7,#1				;@ onScreen = true
+	orr r7,r7,#0x100			;@ onScreen = true
 continueRend:
 	add r4,r4,r4,lsl#16			;@ hOff += hSign
 	adds r6,r6,#0x01000000
@@ -1276,7 +1277,8 @@ checkBail:
 	teq r4,r4,lsl#16			;@ Are both sign same?
 	bmi continueRend			;@ No, continue
 exitLineRender:
-	ands r7,r7,#1				;@ onScreen
+	ands r7,r7,#0x100			;@ onScreen?
+	mov r7,r7,lsr#8
 	strbne r7,[suzptr,#everOnScreen]
 	ldmfd sp!,{r4-r8,r10,r11,lr}
 	bx lr
@@ -1339,15 +1341,15 @@ sprBgrShdw:
 ;@----------------------------------------------------------------------------
 suzWriteCollision:			;@ In r4=hoff.
 ;@----------------------------------------------------------------------------
-	cmp r7,#0x10000000
-	bxpl lr
+	tst r7,#0xF00000			;@ Sprite collision off?
+	bxne lr
 	ldr r2,[suzptr,#suzLineCollisionAddress]
 	tst r4,#0x10000
 	ldrb r0,[r2,r4,lsr#17]
 	andeq r0,r0,#0x0F
-	orreq r0,r0,r7,lsr#20
+	orreq r0,r0,r7,lsr#12
 	andne r0,r0,#0xF0
-	orrne r0,r0,r7,lsr#24
+	orrne r0,r0,r7,lsr#16
 	strb r0,[r2,r4,lsr#17]
 
 	add r9,r9,#2*3				;@ 2*SPR_RDWR_CYC
@@ -1442,17 +1444,17 @@ suzWriteAndTest:				;@ In r4=hoff, r5=pixel.
 ;@----------------------------------------------------------------------------
 suzTestCollision:			;@ In r4=hoff. Out r0=collision
 ;@----------------------------------------------------------------------------
-	cmp r7,#0x10000000
-	bxpl lr
+	tst r7,#0xF00000			;@ Sprite collision off?
+	bxne lr
 	ldr r2,[suzptr,#suzLineCollisionAddress]
 	tst r4,#0x10000
 	ldrb r0,[r2,r4,lsr#17]
 	moveq r1,r0,lsr#4
 	andeq r0,r0,#0x0F
-	orreq r0,r0,r7,lsr#20
+	orreq r0,r0,r7,lsr#12
 	andne r1,r0,#0x0F
 	andne r0,r0,#0xF0
-	orrne r0,r0,r7,lsr#24
+	orrne r0,r0,r7,lsr#16
 	strb r0,[r2,r4,lsr#17]
 
 	ldrb r2,[suzptr,#suzCollision]

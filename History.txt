@@ -1,7 +1,7 @@
 ARMSuzy revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
-V0.1.4 - 2025-10-16 (FluBBa)
+V0.1.4 - 2025-10-18 (FluBBa)
 	Added different revisions.
 	Added some register mirrors.
 	Optimizations to rendering.
