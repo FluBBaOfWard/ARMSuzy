@@ -1139,13 +1139,11 @@ checkVBail:
 ;@suzLineGetPixel:			;@ Out r5=pixel
 	.macro suzLineGetPixel
 ;@----------------------------------------------------------------------------
-//	ldr r0,[suzptr,#suzLineRepCountTyp]
 	subs r0,r7,#0x10000000
 	bcc fetchPacket
 
 	movs r1,r0,lsl#24			;@ Check bit #0 & #7
 	movpl r7,r0
-//	strpl r0,[suzptr,#suzLineRepCountTyp]
 	beq getPixelEnd				;@ line_packed? Reuse r5.
 getRealPixel:
 	ldrb r0,[suzptr,#suzSprCtl0_PixelBits]
@@ -1158,17 +1156,15 @@ getPixelEnd:
 ;@----------------------------------------------------------------------------
 fetchPacket:
 	suzLineGetBits5
-//	movs r0,r0,ror#4
 	beq exitLineRender
 	bic r7,r7,#1
 	orr r7,r7,r0,ror#4
-//	str r0,[suzptr,#suzLineRepCountTyp]
 	b getRealPixel
 
 ;@----------------------------------------------------------------------------
 fetchNewBits:	;@ r5 is ok to use here.
-	mov r2,#3
 	ldrh r1,[suzptr,#suzLinePacketBitsLeft]
+	mov r2,#3
 	subs r1,r1,r2
 	bcc fetchNewBits2
 newBitsRet:
@@ -1260,22 +1256,15 @@ horizontalLoop:
 	sub r6,r6,r0,lsl#25			;@ HSIZACUM.Byte.High = 0
 rendLoop:
 	cmp r4,#GAME_WIDTH<<16
-	bcs checkBail
-#ifdef __ARM_ARCH_5TE__
-	blx r11						;@ ProcessPixel(hOff, pix)
-#else
-	mov lr,pc
-	bx r11						;@ ProcessPixel(hOff, pix)
-#endif
-	orr r7,r7,#0x100			;@ onScreen = true
-continueRend:
+	orrcc r7,r7,#0x100			;@ onScreen = true
+	bxcc r11					;@ ProcessPixel(hOff, pix)
+	teq r4,r4,lsl#16			;@ Are both sign same?
+	bpl exitLineRender			;@ Yes, exit
+ppReturn:
 	add r4,r4,r4,lsl#16			;@ hOff += hSign
 	adds r6,r6,#0x01000000
 	bcc rendLoop
 	b horizontalLoop
-checkBail:
-	teq r4,r4,lsl#16			;@ Are both sign same?
-	bmi continueRend			;@ No, continue
 exitLineRender:
 	ands r7,r7,#0x100			;@ onScreen?
 	mov r7,r7,lsr#8
@@ -1300,7 +1289,7 @@ sprTypeTbl:
 // 0   exclusive-or the data
 sprNoColl:
 	cmp r5,#0
-	bxeq lr
+	beq ppReturn
 ;@----------------------------------------------------------------------------
 // BACKGROUND NOCOLLIDE
 // 1   F is opaque
@@ -1323,7 +1312,7 @@ suzWritePixel:				;@ In r4=hoff, r5=pixel.
 
 	add r9,r9,#2*3				;@ 2*SPR_RDWR_CYC
 
-	bx lr
+	b ppReturn
 ;@----------------------------------------------------------------------------
 // BACKGROUND SHADOW
 // 1   F is opaque
@@ -1335,14 +1324,12 @@ suzWritePixel:				;@ In r4=hoff, r5=pixel.
 sprBgrShdw:
 	cmp r5,#0xE
 	beq suzWritePixel
-	stmfd sp!,{lr}
 	bl suzWritePixel
-	ldmfd sp!,{lr}
 ;@----------------------------------------------------------------------------
 suzWriteCollision:			;@ In r4=hoff.
 ;@----------------------------------------------------------------------------
 	tst r7,#0xF00000			;@ Sprite collision off?
-	bxne lr
+	bne ppReturn
 	ldr r2,[suzptr,#suzLineCollisionAddress]
 	tst r4,#0x10000
 	ldrb r0,[r2,r4,lsr#17]
@@ -1354,7 +1341,7 @@ suzWriteCollision:			;@ In r4=hoff.
 
 	add r9,r9,#2*3				;@ 2*SPR_RDWR_CYC
 
-	bx lr
+	b ppReturn
 ;@----------------------------------------------------------------------------
 // XOR SHADOW
 // 1   F is opaque
@@ -1365,7 +1352,7 @@ suzWriteCollision:			;@ In r4=hoff.
 // 1   exclusive-or the data
 sprXorShdw:
 	cmp r5,#0
-	bxeq lr
+	beq ppReturn
 ;@----------------------------------------------------------------------------
 suzXorPixel:				;@ In r4=hoff, r5=pixel.
 ;@----------------------------------------------------------------------------
@@ -1378,7 +1365,7 @@ suzXorPixel:				;@ In r4=hoff, r5=pixel.
 	add r9,r9,#3*3				;@ 3*SPR_RDWR_CYC
 
 	cmp r5,#0xE
-	bxeq lr
+	beq ppReturn
 	b suzTestCollision
 
 ;@----------------------------------------------------------------------------
@@ -1392,7 +1379,7 @@ suzXorPixel:				;@ In r4=hoff, r5=pixel.
 sprBoundShdw:
 	cmp r5,#0
 	cmpne r5,#0xE				;@ This seems weird
-	bxeq lr
+	beq ppReturn
 	cmp r5,#0xF
 	beq suzTestCollision		;@ Only collision
 	b suzWriteAndTest
@@ -1427,7 +1414,7 @@ sprShadow:
 // 0   exclusive-or the data
 sprNormal:
 	cmp r5,#0
-	bxeq lr
+	beq ppReturn
 ;@----------------------------------------------------------------------------
 suzWriteAndTest:				;@ In r4=hoff, r5=pixel.
 ;@----------------------------------------------------------------------------
@@ -1445,7 +1432,7 @@ suzWriteAndTest:				;@ In r4=hoff, r5=pixel.
 suzTestCollision:			;@ In r4=hoff. Out r0=collision
 ;@----------------------------------------------------------------------------
 	tst r7,#0xF00000			;@ Sprite collision off?
-	bxne lr
+	bne ppReturn
 	ldr r2,[suzptr,#suzLineCollisionAddress]
 	tst r4,#0x10000
 	ldrb r0,[r2,r4,lsr#17]
@@ -1463,7 +1450,7 @@ suzTestCollision:			;@ In r4=hoff. Out r0=collision
 
 	add r9,r9,#3*3				;@ 3*SPR_RDWR_CYC
 
-	bx lr
+	b ppReturn
 
 ;@----------------------------------------------------------------------------
 
