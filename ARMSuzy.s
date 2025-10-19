@@ -1028,19 +1028,17 @@ quadLoop:
 	ldrheq r0,[suzptr,#suzVSizOff]		;@ Start value of VSizAcum
 	orr r11,r11,r0,lsl#16
 
-verticalLoop:
 ;@------------------------------------
 suzLineStart:
 ;@------------------------------------
 	ldrh r1,[suzptr,#suzSprDLine]
+verticalLoop:
 	ldr r2,[suzptr,#suzyRAM]
 	ldrb r0,[r2,r1]
 	add r9,r9,#3				;@ SPR_RDWR_CYC
 
 	strh r0,[suzptr,#suzSprDOff]
 	cmp r0,#1
-	addeq r1,r1,r0
-	strheq r1,[suzptr,#suzSprDLine]
 	beq exitQuad
 	bcc exitQuadLoop
 
@@ -1050,12 +1048,10 @@ suzLineStart:
 	sub r11,r11,r0,lsl#25
 v2Loop:
 	cmp r8,#GAME_HEIGHT<<16
-	bcs checkVBail
-//	mov r0,r10					;@ hSign
-//	mov r1,r6					;@ hQuadOff
-	mov r2,r8,lsr#16			;@ vOff
-	bl suzLineRender
-keepRendering:
+	bcc suzLineRender
+	teq r8,r8,lsl#16			;@ Are both sign same?
+	bpl breakV2Loop				;@ Abort
+lineRenderReturn:
 	add r8,r8,r8,lsl#16			;@ vOff += vSign
 	ldrb r0,[suzptr,#suzSprCtl1]
 	movs r0,r0,lsl#27			;@ Check ReloadDepth
@@ -1088,6 +1084,8 @@ breakV2Loop:
 	strh r1,[suzptr,#suzSprDLine]
 	b verticalLoop
 exitQuad:
+	add r1,r1,r0
+	strh r1,[suzptr,#suzSprDLine]
 	mov r1,r8,lsl#16
 	;@ Flip quadrant bit value (0-1)
 	eors r4,r4,#1
@@ -1103,10 +1101,6 @@ exitQuadLoop:
 //	strh r11,[suzptr,#suzVSizAcum]
 	ldmfd sp!,{r4-r8,r10,r11,lr}
 	bx lr
-checkVBail:
-	teq r8,r8,lsl#16			;@ Are both sign same?
-	bpl breakV2Loop				;@ Abort
-	b keepRendering
 
 #ifdef NDS
 	.section .itcm						;@ For the NDS ARM9
@@ -1195,7 +1189,7 @@ fetchNewBits2:
 	b newBitsRet
 
 ;@----------------------------------------------------------------------------
-suzLineRender:				;@ In r10=hSign, r6=hQuadOff, r2=vOff.
+suzLineRender:				;@ In r10=hSign, r6=hQuadOff, r8=vOff.
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4-r8,r10,r11,lr}
 
@@ -1218,6 +1212,7 @@ suzLineRender:				;@ In r10=hSign, r6=hQuadOff, r2=vOff.
 	ldrhcc r0,[suzptr,#suzHSizOff]	;@ If hSign == 1
 	orr r6,r6,r0,lsl#16
 
+	mov r2,r8,lsr#16			;@ vOff
 	ldr r0,[suzptr,#suzVidBas]	;@ Also suzCollBas
 	ldr r1,[suzptr,#suzyRAM]
 	mov r8,r0,lsl#16
@@ -1270,7 +1265,7 @@ exitLineRender:
 	mov r7,r7,lsr#8
 	strbne r7,[suzptr,#everOnScreen]
 	ldmfd sp!,{r4-r8,r10,r11,lr}
-	bx lr
+	b lineRenderReturn
 
 ;@----------------------------------------------------------------------------
 ;@ suzProcessPixel:			;@ In r4=hoff, r5=pixel
