@@ -1032,19 +1032,25 @@ quadLoop:
 suzLineStart:
 ;@------------------------------------
 	ldrh r1,[suzptr,#suzSprDLine]
+	b quadStart
 verticalLoop:
+breakV2Loop:
+	ldrh r0,[suzptr,#suzSprDOff]
+	ldrh r1,[suzptr,#suzSprDLine]
+	add r1,r1,r0
+	strh r1,[suzptr,#suzSprDLine]
+quadStart:
 	ldr r2,[suzptr,#suzyRAM]
 	ldrb r0,[r2,r1]
 	add r9,r9,#3				;@ SPR_RDWR_CYC
 
 	strh r0,[suzptr,#suzSprDOff]
 	cmp r0,#1
-	beq exitQuad
-	bcc exitQuadLoop
+	bls exitQuad
 
 	add r11,r11,r11,lsl#16
 	movs r0,r11,lsr#24
-	beq breakV2Loop
+	beq verticalLoop
 	sub r11,r11,r0,lsl#25
 v2Loop:
 	cmp r8,#GAME_HEIGHT<<16
@@ -1077,13 +1083,9 @@ noTilt:
 noStretchTilt:
 	adds r11,r11,#0x01000000
 	bcc v2Loop
-breakV2Loop:
-	ldrh r0,[suzptr,#suzSprDOff]
-	ldrh r1,[suzptr,#suzSprDLine]
-	add r1,r1,r0
-	strh r1,[suzptr,#suzSprDLine]
 	b verticalLoop
 exitQuad:
+	bcc exitQuadLoop
 	add r1,r1,r0
 	strh r1,[suzptr,#suzSprDLine]
 	mov r1,r8,lsl#16
