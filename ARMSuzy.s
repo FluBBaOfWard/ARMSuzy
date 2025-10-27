@@ -61,9 +61,8 @@ suzyReset:					;@ r0=ram, r1=soc, r12=suzptr
 	str r0,[suzptr,#suzMathJKLM]
 	strh r0,[suzptr,#suzMathNP]
 
-	mov r0,#1
+	mov r0,#0
 	str r0,[suzptr,#mathAB_sign]
-	str r0,[suzptr,#mathCD_sign]
 
 	ldmfd sp!,{r0,r1,lr}
 
@@ -394,7 +393,7 @@ suSprSysR:					;@ Sprite Sys (0xFC92)
 	ldrb r0,[suzptr,#suzSprSys]
 	and r0,r0,#0x1A				;@ StopOnCurrent, LeftHand & VStretch
 	ldrb r1,[suzptr,#suzSprSysStat]
-	and r1,r1,#0x04				;@ Only unsafe access yet.
+	and r1,r1,#0x64				;@ Overflow/div0, last carry & unsafe access.
 	orr r0,r0,r1
 	ldrb r1,[suzptr,#suzSprGo]
 	and r1,r1,#0x01				;@ SprGo?
@@ -515,7 +514,7 @@ io_write_tbl:
 	.long suRegMirW				;@ 0xFC4F Mirror of 0xFC0F
 	.long suRegMirW				;@ 0xFC50 Mirror of 0xFC10
 	.long suRegMirW				;@ 0xFC51 Mirror of 0xFC11
-	.long suMathDW				;@ 0xFC52 MATHD
+	.long suRegLW				;@ 0xFC52 MATHD
 	.long suMathCW				;@ 0xFC53 MATHC
 	.long suRegLW				;@ 0xFC54 MATHB
 	.long suMathAW				;@ 0xFC55 MATHA
@@ -541,7 +540,7 @@ io_write_tbl:
 	.long suRegMirW				;@ 0xFC69 Mirror of 0xFC29
 	.long suRegMirW				;@ 0xFC6A Mirror of 0xFC2A
 	.long suRegMirW				;@ 0xFC6B Mirror of 0xFC2B
-	.long suRegLW				;@ 0xFC6C MATHM
+	.long suMathMW				;@ 0xFC6C MATHM
 	.long suRegW				;@ 0xFC6D MATHL
 	.long suRegLW				;@ 0xFC6E MATHK
 	.long suRegW				;@ 0xFC6F MATHJ
@@ -658,11 +657,6 @@ suRegLW:
 	bx lr
 
 ;@----------------------------------------------------------------------------
-suMathDW:					;@ Math D Register (0xFC52)
-;@----------------------------------------------------------------------------
-	strb r1,[suzptr,#suzMathD]
-	mov r1,#0				;@ Set Math C to zero.
-;@----------------------------------------------------------------------------
 suMathCW:					;@ Math C Register (0xFC53)
 ;@----------------------------------------------------------------------------
 	ldrb r0,[suzptr,#suzMathD]
@@ -672,11 +666,9 @@ suMathCW:					;@ Math C Register (0xFC53)
 	beq noSignedCD
 	;@ Account for the math bug that 0x8000 is +ve & 0x0000 is -ve by subracting 1
 	sub r1,r0,#1
-	tst r1,#0x8000
+	ands r1,r1,#0x8000
 	rsbne r0,r0,#0				;@ Negate CD
-	mov r1,#1
-	movne r1,#-1
-	str r1,[suzptr,#mathCD_sign]
+	strh r1,[suzptr,#mathCD_sign]
 noSignedCD:
 	strh r0,[suzptr,#suzMathCD]
 	bx lr
@@ -690,38 +682,38 @@ suMathAW:					;@ Math A Register (0xFC55)
 	beq noSignedAB
 	;@ Account for the math bug that 0x8000 is +ve & 0x0000 is -ve by subracting 1
 	sub r1,r0,#1
-	tst r1,#0x8000
+	ands r1,r1,#0x8000
 	rsbne r0,r0,#0				;@ Negate AB
-	mov r1,#1
-	movne r1,#-1
-	str r1,[suzptr,#mathAB_sign]
+	strh r1,[suzptr,#mathAB_sign]
 noSignedAB:
 	strh r0,[suzptr,#suzMathAB]
 ;@----------------------------------------------------------------------------
 ;@ suzDoMultiply:			;@
 ;@----------------------------------------------------------------------------
-	mov r1,#0
-	strb r1,[suzptr,#sprSys_Mathbit]
 	ldrh r0,[suzptr,#suzMathAB]
 	ldrh r1,[suzptr,#suzMathCD]
-	mul r3,r1,r0
+	ldrb r3,[suzptr,#suzSprSysStat]
+	mul r0,r1,r0
+	and r3,r3,#0x40				;@ Keep overflow.
+	orr r3,r3,#0x04				;@ Unsafe always set?
 	tst r2,#0x80				;@ SignedMath
 	beq noSignedMult
-#ifdef __ARM_ARCH_5TE__
-	ldrd r0,r1,[suzptr,#mathAB_sign]	;@ r1=mathCD_sign
-#else
-	ldr r0,[suzptr,#mathAB_sign]	;@ r1=mathCD_sign
-	ldr r1,[suzptr,#mathCD_sign]
-#endif
-	adds r0,r0,r1
-	rsbeq r3,r3,#0
+	ldrne r1,[suzptr,#mathAB_sign]
+	eornes r1,r1,r1,lsl#16
+	bpl noSignedMult
+	rsbmis r0,r0,#0
+	orrcc r3,r3,#0x20			;@ Last Carry?
 noSignedMult:
-	str r3,[suzptr,#suzMathEFGH]
+	str r0,[suzptr,#suzMathEFGH]
 
 	tst r2,#0x40				;@ Accumulate
-	ldrne r0,[suzptr,#suzMathJKLM]
-	addne r0,r0,r3
-	strne r0,[suzptr,#suzMathJKLM]
+	beq noMula
+	ldr r1,[suzptr,#suzMathJKLM]
+	adds r1,r1,r0
+	str r1,[suzptr,#suzMathJKLM]
+	orrcs r3,r3,#0x60			;@ Overflow & Last Carry?
+noMula:
+	strb r3,[suzptr,#suzSprSysStat]
 
 	bx lr
 
@@ -733,22 +725,34 @@ suMathEW:					;@ Math E Register (0xFC63)
 ;@ suzDoDivide:				;@
 ;@----------------------------------------------------------------------------
 	ldrh r1,[suzptr,#suzMathNP]
+	mov r2,#0x04				;@ Unsafe always set?
 	cmp r1,#0
-	mov r2,#0
-	moveq r2,#1
-	strb r2,[suzptr,#sprSys_Mathbit]
+	orreq r2,r2,#0x60			;@ Set div by 0 & last carry.
 	moveq r0,#-1
 	beq zeroDvide
 	ldr r0,[suzptr,#suzMathEFGH]
-	stmfd sp!,{lr}
+	stmfd sp!,{r2,lr}
 	bl ui32div
-	ldmfd sp!,{lr}
+	ldmfd sp!,{r2,lr}
 zeroDvide:
 	str r1,[suzptr,#suzMathJKLM]
-	mov r1,r0,lsr#16
-	strh r1,[suzptr,#suzMathAB]
+	cmp r1,#0
+	orrne r2,r2,#0x20			;@ Last carry?
 	strh r0,[suzptr,#suzMathCD]
+	mov r0,r0,lsr#16
+	strh r0,[suzptr,#suzMathAB]
+	strb r2,[suzptr,#suzSprSysStat]
 	bx lr
+;@----------------------------------------------------------------------------
+suMathMW:					;@ Math M Register (0xFC6C)
+;@----------------------------------------------------------------------------
+	and r1,r1,#0xFF
+	strh r1,[suzptr,#suzMathM]
+	ldrb r1,[suzptr,#suzSprSysStat]
+	bic r1,r1,#0x40				;@ Clear overflow
+	strb r1,[suzptr,#suzSprSysStat]
+	bx lr
+
 ;@----------------------------------------------------------------------------
 suSprCtl0W:					;@ Sprite Control 0 (0xFC80)
 ;@----------------------------------------------------------------------------
@@ -1024,8 +1028,8 @@ quadLoop:
 
 	ldrh r11,[suzptr,#suzSprVSiz]
 	;@ Perform the SIZOFF
-	cmp r1,#0x10000
-	ldrheq r0,[suzptr,#suzVSizOff]		;@ Start value of VSizAcum
+	adds r0,r1,#0x10000
+	ldrhne r0,[suzptr,#suzVSizOff]		;@ Start value of VSizAcum
 	orr r11,r11,r0,lsl#16
 
 ;@------------------------------------
@@ -1211,7 +1215,7 @@ suzLineRender:				;@ In r10=hSign, r6=hQuadOff, r8=vOff.
 	ldrh r6,[suzptr,#suzSprHSiz]
 	;@ Zero/Force the horizontal scaling accumulator
 	adds r0,r10,#0x10000
-	ldrhcc r0,[suzptr,#suzHSizOff]	;@ If hSign == 1
+	ldrhne r0,[suzptr,#suzHSizOff]	;@ If hSign == 1
 	orr r6,r6,r0,lsl#16
 
 	mov r2,r8,lsr#16			;@ vOff

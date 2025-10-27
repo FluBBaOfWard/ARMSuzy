@@ -142,10 +142,7 @@ typedef struct {
 	u8 soc;				// Revision of Suzy
 	u8 sprCtl0_PixelBits;
 	u8 everOnScreen;
-	u8 sprSys_UnsafeAccess;
-	u8 sprSys_Mathbit;
-	u8 sprSys_MathInProgress;
-	u8 padding2[4];
+	u8 padding2[3];
 
 	// Line rendering related variables
 	u32 lineRepCountTyp;
@@ -155,8 +152,8 @@ typedef struct {
 
 	u8 penIndex[16];
 
-	int mathAB_sign;
-	int mathCD_sign;
+	u16 mathAB_sign;
+	u16 mathCD_sign;
 
 	void (*sprTypeFunc)(void);
 	u32 lineBaseAddress;

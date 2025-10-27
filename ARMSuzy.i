@@ -134,7 +134,7 @@ suzSuzySRev:		.byte 0		;@ 0x89 Suzy Software Revision
 suzReserved5:		.space 0x06	;@ 0x8A-0x8F Reserved
 suzSuzyBusEn:		.byte 0		;@ 0x90 Suzy Bus Enable
 suzSprGo:			.byte 0		;@ 0x91 Sprite Process Start Bit
-suzSprSys:			.byte 0		;@ 0x92 System Control
+suzSprSys:			.byte 0		;@ 0x92 Sprite System Control
 suzReserved6:		.space 0x1D	;@ 0x93-0xAF Reserved
 suzJoystick:		.byte 0		;@ 0xB0 Read Joystick and Switches
 suzSwitches:		.byte 0		;@ 0xB1 Read Other Switches
@@ -149,15 +149,12 @@ suzHowie:			.byte 0		;@ 0xC4 Read or write as appropriate
 suzPadding:			.skip 3
 
 ;@----------------------------------------------------------------------------
-suzSprSysStat:		.byte 0		;@ 0x92 System Control, read.
+suzSprSysStat:		.byte 0		;@ 0x92 Sprite System Control, read. Only unsafe yet.
 suzCollision:		.byte 0		;@ Collision value for current sprite.
 suzSOC:				.byte 0		;@ Revision of Suzy
 suzSprCtl0_PixelBits:	.byte 0
 everOnScreen:		.byte 0
-sprSys_UnsafeAccess:	.byte 0
-sprSys_Mathbit:		.byte 0
-sprSys_MathInProgress:	.byte 0
-suzPadding2:		.skip 4
+suzPadding2:		.skip 3
 
 suzLineRepCountTyp:				;@ Unused now
 suzLineType:		.byte 0
@@ -171,8 +168,8 @@ suzLineShiftReg:	.long 0		;@ Unused now
 
 suzPenIndex:		.space 16	;@
 
-mathAB_sign:		.long 0
-mathCD_sign:		.long 0
+mathAB_sign:		.short 0
+mathCD_sign:		.short 0
 
 suzSprTypeFunc:		.long 0
 suzLineBaseAddress:	.long 0		;@ Current dest line adr.
