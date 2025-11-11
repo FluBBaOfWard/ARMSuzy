@@ -15,6 +15,7 @@
 #endif
 #include "ARMSuzy.i"
 #include "../ARMMikey/ARM6502/M6502.i"
+#include "../ARMMikey/ARMMikey.i"
 
 	.global suzyInit
 	.global suzyReset
@@ -699,9 +700,9 @@ noSignedAB:
 	tst r2,#0x80				;@ SignedMath
 	beq noSignedMult
 	ldrne r1,[suzptr,#mathAB_sign]
-	eornes r1,r1,r1,lsl#16
+	eorsne r1,r1,r1,lsl#16
 	bpl noSignedMult
-	rsbmis r0,r0,#0
+	rsbsmi r0,r0,#0
 	orrcc r3,r3,#0x20			;@ Last Carry?
 noSignedMult:
 	str r0,[suzptr,#suzMathEFGH]
@@ -843,7 +844,7 @@ spriteLoop:
 noSprCollWrite:
 
 	ldrb r0,[suzptr,#suzSprGo]
-	tst r0,#0x04				;@ Everon?
+	tst r0,#0x04				;@ Everon detector enabled?
 	beq skipSprite
 	ldrh r0,[suzptr,#suzSCBAdr]
 	ldrh r1,[suzptr,#suzCollOff]
@@ -869,6 +870,8 @@ exitPaintSprite:
 	ldrb r0,[suzptr,#suzSprGo]
 	bic r0,r0,#1
 	strb r0,[suzptr,#suzSprGo]
+	mov r0,#1
+	strb r0,[mikptr,#mikSDoneAck]
 	bl mikWakeCPU
 
 outOfSpriteCycles:
