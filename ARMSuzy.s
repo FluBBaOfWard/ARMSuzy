@@ -392,8 +392,8 @@ suHRevR:					;@ Suzy HW Revision (0xFC88)
 suSprSysR:					;@ Sprite Sys (0xFC92)
 ;@----------------------------------------------------------------------------
 	ldrb r0,[suzptr,#suzSprSys]
-	and r0,r0,#0x1A				;@ StopOnCurrent, LeftHand & VStretch
 	ldrb r1,[suzptr,#suzSprSysStat]
+	and r0,r0,#0x1A				;@ StopOnCurrent, LeftHand & VStretch
 	and r1,r1,#0x64				;@ Overflow/div0, last carry & unsafe access.
 	orr r0,r0,r1
 	ldrb r1,[suzptr,#suzSprGo]
@@ -810,11 +810,12 @@ suzPaintSprites:			;@ In r0=cycles to use, r12=suzyptr, Out r0=cycles used
 	and r1,r1,r1,lsr#8
 	tst r1,#1					;@ Is BusEnable & SprGo set?
 	beq exitPaintSprite
-	mov r4,r0					;@ Remaining cycles
+	mov r6,r0					;@ Remaining cycles
 	strb r9,[suzptr,#everOnScreen]
+	ldr r4,[suzptr,#suzyRAM]	;@ r4=ptr to RAM
 spriteLoop:
-	ldrb r0,[suzptr,#suzSCBNextH]
-	cmp r0,#0
+	ldrh r0,[suzptr,#suzSCBNext]
+	tst r0,#0xFF00
 	beq exitPaintSprite
 
 	bl suzFetchSpriteData
@@ -836,11 +837,10 @@ spriteLoop:
 	beq noSprCollWrite
 	ldrh r0,[suzptr,#suzSCBAdr]
 	ldrh r1,[suzptr,#suzCollOff]
-	ldr r2,[suzptr,#suzyRAM]
 	add r0,r0,r1
 	mov r0,r0,lsl#16
 	ldrb r1,[suzptr,#suzCollision]
-	strb r1,[r2,r0,lsr#16]
+	strb r1,[r4,r0,lsr#16]
 noSprCollWrite:
 
 	ldrb r0,[suzptr,#suzSprGo]
@@ -848,10 +848,9 @@ noSprCollWrite:
 	beq skipSprite
 	ldrh r0,[suzptr,#suzSCBAdr]
 	ldrh r1,[suzptr,#suzCollOff]
-	ldr r2,[suzptr,#suzyRAM]
 	add r0,r0,r1
 	mov r0,r0,lsl#16
-	ldrb r1,[r2,r0,lsr#16]
+	ldrb r1,[r4,r0,lsr#16]
 	ldrb r3,[suzptr,#everOnScreen]
 	cmp r3,#0
 	orreq r1,r1,#0x80
@@ -862,7 +861,7 @@ skipSprite:
 	ldrb r0,[suzptr,#suzSprSys]
 	tst r0,#0x02				;@ Stop on Current?
 	bne exitPaintSprite
-	cmp r9,r4
+	cmp r9,r6
 	bmi spriteLoop
 	b outOfSpriteCycles
 
@@ -879,72 +878,69 @@ outOfSpriteCycles:
 	ldmfd sp!,{r4-r6,r9,lr}
 	bx lr
 ;@----------------------------------------------------------------------------
-suzFetchSpriteData:			;@ In/Out r9=cyclesUsed
+suzFetchSpriteData:			;@ In r0=SCBNext, r4=RAM, In/Out r9=cyclesUsed
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{r4-r6,lr}
-	ldr r5,[suzptr,#suzyRAM]
-	ldrh r4,[suzptr,#suzSCBNext]
-	strh r4,[suzptr,#suzSCBAdr]
-//	strh r4,[suzptr,#suzTmpAdr]
-	add r4,r4,r5
+	stmfd sp!,{r5,lr}
+	strh r0,[suzptr,#suzSCBAdr]
+	add r3,r0,r4
 
-	ldrb r1,[r4],#1
+	ldrb r1,[r3],#1
 	ldr r2,=sprTypeTbl
 	and r0,r1,#7
-	ldr r3,[r2,r0,lsl#2]
-	str r3,[suzptr,#suzSprTypeFunc]
+	ldr r0,[r2,r0,lsl#2]
+	str r0,[suzptr,#suzSprTypeFunc]
 	bl suSprCtl0W
 
-	ldrb r6,[r4],#1
-	strb r6,[suzptr,#suzSprCtl1]
+	ldrb r5,[r3],#1
+	strb r5,[suzptr,#suzSprCtl1]
 
-	ldrb r0,[r4],#1
+	ldrb r0,[r3],#1
 	ldrb r1,[suzptr,#suzSprSys]
 	and r0,r0,#0x2F
 	and r1,r1,#0x20
 	orr r0,r0,r1
 	strb r0,[suzptr,#suzSprColl]
 
-	ldrb r0,[r4],#1
-	ldrb r1,[r4],#1
+	ldrb r0,[r3],#1
+	ldrb r1,[r3],#1
 	orr r0,r0,r1,lsl#8
 	strh r0,[suzptr,#suzSCBNext]
 
 	add r9,r9,#5*3				;@ 5 * SPR_RDWR_CYC
 
-	tst r6,#0x04				;@ sprCtl1 - SkipSprite
+	tst r5,#0x04				;@ sprCtl1 - SkipSprite
 	bne skipPalette
 
 	mov r0,#0
 	strb r0,[suzptr,#suzCollision]
 
-	ldrb r0,[r4],#1
-	ldrb r1,[r4],#1
+	ldrb r0,[r3],#1
+	ldrb r1,[r3],#1
 	orr r0,r0,r1,lsl#8
 	strh r0,[suzptr,#suzSprDLine]
 
-	ldrb r0,[r4],#1
-	ldrb r1,[r4],#1
+	ldrb r0,[r3],#1
+	ldrb r1,[r3],#1
 	orr r0,r0,r1,lsl#8
 	strh r0,[suzptr,#suzHPosStrt]
 
-	ldrb r0,[r4],#1
-	ldrb r1,[r4],#1
+	ldrb r0,[r3],#1
+	ldrb r1,[r3],#1
 	orr r0,r0,r1,lsl#8
 	strh r0,[suzptr,#suzVPosStrt]
 
 	add r9,r9,#6*3				;@ 6 * SPR_RDWR_CYC
 
-	ands r2,r6,#0x30			;@ sprCtl1 - ReloadDepth
+	ands r2,r5,#0x30			;@ sprCtl1 - ReloadDepth
 	beq endSpriteFetch
 
-	ldrb r0,[r4],#1
-	ldrb r1,[r4],#1
+	ldrb r0,[r3],#1
+	ldrb r1,[r3],#1
 	orr r0,r0,r1,lsl#8
 	strh r0,[suzptr,#suzSprHSiz]
 
-	ldrb r0,[r4],#1
-	ldrb r1,[r4],#1
+	ldrb r0,[r3],#1
+	ldrb r1,[r3],#1
 	orr r0,r0,r1,lsl#8
 	strh r0,[suzptr,#suzSprVSiz]
 
@@ -953,8 +949,8 @@ suzFetchSpriteData:			;@ In/Out r9=cyclesUsed
 	cmp r2,#0x20
 	bcc endSpriteFetch
 
-	ldrb r0,[r4],#1
-	ldrb r1,[r4],#1
+	ldrb r0,[r3],#1
+	ldrb r1,[r3],#1
 	orr r0,r0,r1,lsl#8
 	strh r0,[suzptr,#suzStretch]
 
@@ -962,32 +958,34 @@ suzFetchSpriteData:			;@ In/Out r9=cyclesUsed
 
 	beq endSpriteFetch
 
-	ldrb r0,[r4],#1
-	ldrb r1,[r4],#1
+	ldrb r0,[r3],#1
+	ldrb r1,[r3],#1
 	orr r0,r0,r1,lsl#8
 	strh r0,[suzptr,#suzTilt]
 
 	add r9,r9,#2*3				;@ 2 * SPR_RDWR_CYC
 
 endSpriteFetch:
-	tst r6,#0x08				;@ sprCtl1 - !ReloadPalette
+	tst r5,#0x08				;@ sprCtl1 - !ReloadPalette
 	bne skipPalette
 	add r0,suzptr,#suzPenIndex
-	mov r1,#8
+	mov r1,#1
+	ldrb r2,[suzptr,#suzSprCtl0_PixelBits]
+	mov r1,r1,lsl r2
+	add r2,r1,r1,lsr#1			;@ *3/2
+	add r9,r9,r2				;@ x * SPR_RDWR_CYC
 penLoop:
-	ldrb r2,[r4],#1
+	ldrb r2,[r3],#1
 	mov r2,r2,ror#4
 	orr r2,r2,r2,lsr#16+4
 	strh r2,[r0],#2
-	subs r1,r1,#1
+	subs r1,r1,#2
 	bne penLoop
-	add r9,r9,#8*3				;@ 8 * SPR_RDWR_CYC
 
 skipPalette:
-	sub r4,r4,r5
-	strh r4,[suzptr,#suzTmpAdr]
-	ldmfd sp!,{r4-r6,lr}
-	bx lr
+	sub r3,r3,r4
+	strh r3,[suzptr,#suzTmpAdr]
+	ldmfd sp!,{r5,pc}
 ;@----------------------------------------------------------------------------
 suzRenderQuads:				;@ In/Out r9=cyclesUsed
 ;@----------------------------------------------------------------------------
@@ -1026,8 +1024,7 @@ quadLoop:
 	addne r8,r8,r8,lsl#16
 
 	;@ Zero the stretch, tilt & acum values
-	mov r0,#0
-	strh r0,[suzptr,#suzTiltAcum]
+	strh r1,[suzptr,#suzTiltAcum]		;@ r1 lower 16 bit = 0
 
 	ldrh r11,[suzptr,#suzSprVSiz]
 	;@ Perform the SIZOFF
@@ -1040,6 +1037,13 @@ suzLineStart:
 ;@------------------------------------
 	ldrh r1,[suzptr,#suzSprDLine]
 	b quadStart
+
+#ifdef NDS
+	.section .itcm						;@ For the NDS ARM9
+#elif GBA
+	.section .iwram, "ax", %progbits	;@ For the GBA
+#endif
+
 verticalLoop:
 breakV2Loop:
 	ldrh r0,[suzptr,#suzSprDOff]
@@ -1092,7 +1096,7 @@ noStretchTilt:
 	bcc v2Loop
 	b verticalLoop
 exitQuad:
-	bcc exitQuadLoop
+	ldmfdcc sp!,{r4-r8,r10,r11,pc}	;@ exitQuadLoop
 	add r1,r1,r0
 	strh r1,[suzptr,#suzSprDLine]
 	mov r1,r8,lsl#16
@@ -1103,19 +1107,7 @@ exitQuad:
 
 	subs r5,r5,#1
 	bne quadLoop
-
-exitQuadLoop:
-//	strh r11,[suzptr,#suzSprVSiz]
-//	mov r11,r11,lsr#16
-//	strh r11,[suzptr,#suzVSizAcum]
-	ldmfd sp!,{r4-r8,r10,r11,lr}
-	bx lr
-
-#ifdef NDS
-	.section .itcm						;@ For the NDS ARM9
-#elif GBA
-	.section .iwram, "ax", %progbits	;@ For the GBA
-#endif
+	ldmfd sp!,{r4-r8,r10,r11,pc}	;@ exitQuadLoop
 
 ;@----------------------------------------------------------------------------
 ;@suzLineGetBits:			;@ In r0=bitCount, 1 to 5, Out r0=bits.
@@ -1123,10 +1115,9 @@ exitQuadLoop:
 ;@----------------------------------------------------------------------------
 	subs r10,r10,r0
 	blle fetchNewBits
-	rsb r1,r0,#32
-	add r2,r10,r0
-	mov r0,r3,ror r2
-	mov r0,r0,lsr r1
+	mov r1,#1
+	rsb r1,r1,r1,lsl r0
+	ands r0,r1,r3,ror r10
 	.endm
 ;@----------------------------------------------------------------------------
 ;@suzLineGetBits5:			;@ Out r0=bits.
@@ -1134,8 +1125,8 @@ exitQuadLoop:
 ;@----------------------------------------------------------------------------
 	subs r10,r10,#5
 	blle fetchNewBits
-	mov r0,r3,ror r10
-	ands r0,r0,#0x1f
+	mov r1,#0x1f
+	ands r0,r1,r3,ror r10
 	.endm
 
 ;@----------------------------------------------------------------------------
@@ -1328,12 +1319,11 @@ suzWritePixel:				;@ In r4=hoff, r5=pixel.
 sprBgrShdw:
 	cmp r5,#0xE
 	beq suzWritePixel
-	bl suzWritePixel
 ;@----------------------------------------------------------------------------
 suzWriteCollision:			;@ In r4=hoff.
 ;@----------------------------------------------------------------------------
 	tst r7,#0xF00000			;@ Sprite collision off?
-	bne ppReturn
+	bne suzWritePixel
 	ldr r2,[suzptr,#suzLineCollisionAddress]
 	tst r4,#0x10000
 	ldrb r0,[r2,r4,lsr#17]
@@ -1345,7 +1335,7 @@ suzWriteCollision:			;@ In r4=hoff.
 
 	add r9,r9,#2*3				;@ 2*SPR_RDWR_CYC
 
-	b ppReturn
+	b suzWritePixel
 ;@----------------------------------------------------------------------------
 // XOR SHADOW
 // 1   F is opaque
