@@ -56,14 +56,14 @@ suzyReset:					;@ r0=ram, r1=soc, r12=suzptr
 	;@ Must be initialised to this due to
 	;@ Stun Runner math initialisation bug
 	mov r0,#-1
-	strh r0,[suzptr,#suzMathAB]
 	strh r0,[suzptr,#suzMathCD]
+	strh r0,[suzptr,#suzMathAB]
+	strh r0,[suzptr,#suzMathNP]
 	str r0,[suzptr,#suzMathEFGH]
 	str r0,[suzptr,#suzMathJKLM]
-	strh r0,[suzptr,#suzMathNP]
 
 	mov r0,#0
-	str r0,[suzptr,#mathAB_sign]
+	str r0,[suzptr,#mathABCD_sign]
 
 	ldmfd sp!,{r0,r1,lr}
 
@@ -515,7 +515,7 @@ io_write_tbl:
 	.long suRegMirW				;@ 0xFC4F Mirror of 0xFC0F
 	.long suRegMirW				;@ 0xFC50 Mirror of 0xFC10
 	.long suRegMirW				;@ 0xFC51 Mirror of 0xFC11
-	.long suRegLW				;@ 0xFC52 MATHD
+	.long suMathDW				;@ 0xFC52 MATHD
 	.long suMathCW				;@ 0xFC53 MATHC
 	.long suRegLW				;@ 0xFC54 MATHB
 	.long suMathAW				;@ 0xFC55 MATHA
@@ -658,48 +658,52 @@ suRegLW:
 	bx lr
 
 ;@----------------------------------------------------------------------------
+suMathDW:					;@ Math D Register (0xFC52)
+;@----------------------------------------------------------------------------
+	strb r1,[suzptr,#suzMathD]
+	mov r1,#0					;@ Set Math C to zero.
+;@----------------------------------------------------------------------------
 suMathCW:					;@ Math C Register (0xFC53)
 ;@----------------------------------------------------------------------------
 	ldrb r0,[suzptr,#suzMathD]
-	orr r0,r0,r1,lsl#8
 	ldrb r2,[suzptr,#suzSprSys]
+	orr r1,r0,r1,lsl#8
 	tst r2,#0x80				;@ SignedMath
 	beq noSignedCD
 	;@ Account for the math bug that 0x8000 is +ve & 0x0000 is -ve by subracting 1
-	sub r1,r0,#1
-	ands r1,r1,#0x8000
-	rsbne r0,r0,#0				;@ Negate CD
-	strh r1,[suzptr,#mathCD_sign]
+	sub r0,r1,#1
+	strh r0,[suzptr,#mathCD_sign]
+	movs r0,r0,lsl#16
+	mvnmi r1,r0,asr#16			;@ Negate CD
 noSignedCD:
-	strh r0,[suzptr,#suzMathCD]
+	strh r1,[suzptr,#suzMathCD]
 	bx lr
 ;@----------------------------------------------------------------------------
 suMathAW:					;@ Math A Register (0xFC55)
 ;@----------------------------------------------------------------------------
 	ldrb r0,[suzptr,#suzMathB]
-	orr r0,r0,r1,lsl#8
 	ldrb r2,[suzptr,#suzSprSys]
+	orr r1,r0,r1,lsl#8
 	tst r2,#0x80				;@ SignedMath
 	beq noSignedAB
 	;@ Account for the math bug that 0x8000 is +ve & 0x0000 is -ve by subracting 1
-	sub r1,r0,#1
-	ands r1,r1,#0x8000
-	rsbne r0,r0,#0				;@ Negate AB
-	strh r1,[suzptr,#mathAB_sign]
+	sub r0,r1,#1
+	strh r0,[suzptr,#mathAB_sign]
+	movs r0,r0,lsl#16
+	mvnmi r1,r0,asr#16			;@ Negate AB
 noSignedAB:
-	strh r0,[suzptr,#suzMathAB]
+	strh r1,[suzptr,#suzMathAB]
 ;@----------------------------------------------------------------------------
-;@ suzDoMultiply:			;@
+;@ suzDoMultiply:			;@ AB * CD -> EFGH
 ;@----------------------------------------------------------------------------
-	ldrh r0,[suzptr,#suzMathAB]
-	ldrh r1,[suzptr,#suzMathCD]
+	ldrh r0,[suzptr,#suzMathCD]
 	ldrb r3,[suzptr,#suzSprSysStat]
 	mul r0,r1,r0
 	and r3,r3,#0x40				;@ Keep overflow.
 	orr r3,r3,#0x04				;@ Unsafe always set?
 	tst r2,#0x80				;@ SignedMath
 	beq noSignedMult
-	ldrne r1,[suzptr,#mathAB_sign]
+	ldrne r1,[suzptr,#mathABCD_sign]
 	eorsne r1,r1,r1,lsl#16
 	bpl noSignedMult
 	rsbsmi r0,r0,#0
@@ -1235,8 +1239,8 @@ suzLineRender:				;@ In r10=hSign, r6=hQuadOff, r8=vOff.
 	ldrb r0,[suzptr,#suzSprColl]
 	orr r7,r7,r0,lsl#16			;@ Bit#8 is "onScreen", bit#16-#19 is suzSprColl
 	ldr r11,[suzptr,#suzSprTypeFunc]
-	mov r10,#0					;@ r10=suzLineShiftRegCount
-	mov r3,#0					;@ r3=suzLineShiftReg in horizontalLoop.
+	mov r10,#0					;@ r10=LineShiftRegCount
+	mov r3,#0					;@ r3=LineShiftReg in horizontalLoop.
 ;@------------------------------------
 horizontalLoop:
 	suzLineGetPixel				;@ Returns pixel in r5 or jumps to exitLineRender.

@@ -163,13 +163,12 @@ suzLineCollValue:	.byte 0	;@
 suzLineRepeatCount:	.byte 0	;@
 
 suzLinePacketBitsLeft:	.long 0	;@
-suzLineShiftRegCount:	.long 0	;@ Unused now
-suzLineShiftReg:	.long 0		;@ Unused now
 
 suzPenIndex:		.space 16	;@
 
-mathAB_sign:		.short 0
+mathABCD_sign:
 mathCD_sign:		.short 0
+mathAB_sign:		.short 0
 
 suzSprTypeFunc:		.long 0
 suzLineBaseAddress:	.long 0		;@ Current dest line adr.

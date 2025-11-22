@@ -47,9 +47,7 @@ typedef union {
 		u8	P;
 		u8	N;
 	};
-	u16	CD;
-	u16	AB;
-	u16	NP;
+	u16	Word;
 } MATH_U16;
 
 typedef union {
@@ -147,8 +145,6 @@ typedef struct {
 	// Line rendering related variables
 	u32 lineRepCountTyp;
 	u32 linePacketBitsLeft;
-	u32 lineShiftRegCount;
-	u32 lineShiftReg;
 
 	u8 penIndex[16];
 
