@@ -155,7 +155,6 @@ typedef struct {
 	u32 lineBaseAddress;
 	u32 lineCollisionAddress;
 
-	u8 dirtyTiles[4];
 	u8 *suzyRAM;
 
 } SUZY;

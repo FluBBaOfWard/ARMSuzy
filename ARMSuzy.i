@@ -5,7 +5,9 @@
 //  Created by Fredrik Ahlström on 2024-09-22.
 //  Copyright © 2024-2025 Fredrik Ahlström. All rights reserved.
 //
-;@ ASM header for the Atari Lynx Suzy emulator
+#if !__ASSEMBLER__
+	#error This header file is only for use in assembly files!
+#endif
 
 #define HW_AUTO       (0)
 #define HW_LYNX       (1)
@@ -15,9 +17,9 @@
 #define SOC_HOWARD    (0)
 #define SOC_HOWARD2   (1)
 
-/** Game screen width in pixels */
+/// Game screen width in pixels
 #define GAME_WIDTH  (160)
-/** Game screen height in pixels */
+/// Game screen height in pixels
 #define GAME_HEIGHT (102)
 
 	suzptr		.req r12
@@ -175,9 +177,9 @@ suzLineBaseAddress:	.long 0		;@ Current dest line adr.
 suzLineCollisionAddress:	.long 0		;@ Current collision dest line adr.
 suzyStateEnd:
 
-dirtyTiles:			.space 4
 suzyRAM:			.long 0		;@ 0x10000
 
 suzySize:
+suzyStateSize = suzyStateEnd-suzyState
 
 ;@----------------------------------------------------------------------------

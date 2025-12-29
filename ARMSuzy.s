@@ -37,16 +37,17 @@
 #endif
 	.align 2
 ;@----------------------------------------------------------------------------
-suzyInit:					;@ Only need to be called once
+suzyInit:					;@ r0=ram, r12=suzptr
 ;@----------------------------------------------------------------------------
+	str r0,[suzptr,#suzyRAM]
 	bx lr
 ;@----------------------------------------------------------------------------
-suzyReset:					;@ r0=ram, r1=soc, r12=suzptr
+suzyReset:					;@ r0=soc, r12=suzptr
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{r0,r1,lr}
+	stmfd sp!,{r0,lr}
 
-	mov r0,suzptr
-	ldr r1,=suzySize/4
+	add r0,suzptr,#suzyState
+	ldr r1,=suzyStateSize/4
 	bl memclr_					;@ Clear Suzy state
 
 	mov r0,#0x7F
@@ -65,10 +66,9 @@ suzyReset:					;@ r0=ram, r1=soc, r12=suzptr
 	mov r0,#0
 	str r0,[suzptr,#mathABCD_sign]
 
-	ldmfd sp!,{r0,r1,lr}
+	ldmfd sp!,{r0,lr}
 
-	str r0,[suzptr,#suzyRAM]
-	strb r1,[suzptr,#suzSOC]
+	strb r0,[suzptr,#suzSOC]
 
 	bx lr
 
