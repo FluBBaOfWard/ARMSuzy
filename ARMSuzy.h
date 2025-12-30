@@ -142,11 +142,11 @@ typedef struct {
 	u8 everOnScreen;
 	u8 padding2[3];
 
+	u8 penIndex[16];
+
 	// Line rendering related variables
 	u32 lineRepCountTyp;
 	u32 linePacketBitsLeft;
-
-	u8 penIndex[16];
 
 	u16 mathAB_sign;
 	u16 mathCD_sign;

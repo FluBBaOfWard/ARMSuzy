@@ -99,7 +99,7 @@ suzSCBAdrH:			.byte 0		;@ High
 suzProcAdr:						;@ 0x2E Current Spr Data Proc Address
 suzProcAdrL:		.byte 0		;@ Low
 suzProcAdrH:		.byte 0		;@ High
-suzReserved0:		.space 0x22	;@ 0x30-0x51 Reserved
+suzReserved0:		.skip 0x22	;@ 0x30-0x51 Reserved
 suzMathCD:
 suzMathD:			.byte 0		;@ 0x52 Math D
 suzMathC:			.byte 0		;@ 0x53 Math C
@@ -109,7 +109,7 @@ suzMathA:			.byte 0		;@ 0x55 Math A
 suzMathNP:
 suzMathP:			.byte 0		;@ 0x56 Math P
 suzMathN:			.byte 0		;@ 0x57 Math N
-suzReserved1:		.space 0x08	;@ 0x58-0x5F Reserved
+suzReserved1:		.skip 0x08	;@ 0x58-0x5F Reserved
 suzMathEFGH:
 suzMathGH:
 suzMathH:			.byte 0		;@ 0x60 Math H
@@ -117,7 +117,7 @@ suzMathG:			.byte 0		;@ 0x61 Math G
 suzMathEF:
 suzMathF:			.byte 0		;@ 0x62 Math F
 suzMathE:			.byte 0		;@ 0x63 Math E
-suzReserved2:		.space 0x08	;@ 0x64-0x6B Reserved
+suzReserved2:		.skip 0x08	;@ 0x64-0x6B Reserved
 suzMathJKLM:
 suzMathLM:
 suzMathM:			.byte 0		;@ 0x6C Math M
@@ -125,26 +125,26 @@ suzMathL:			.byte 0		;@ 0x6D Math L
 suzMathJK:
 suzMathK:			.byte 0		;@ 0x6E Math K
 suzMathJ:			.byte 0		;@ 0x6F Math J
-suzReserved3:		.space 0x10	;@ 0x70-0x7F Reserved
+suzReserved3:		.skip 0x10	;@ 0x70-0x7F Reserved
 suzSprCtl0:			.byte 0		;@ 0x80 Sprite Control 0
 suzSprCtl1:			.byte 0		;@ 0x81 Sprite Control 1
 suzSprColl:			.byte 0		;@ 0x82 Sprite Collision Number
 suzSprInit:			.byte 0		;@ 0x83 Sprite Initialization
-suzReserved4:		.space 0x04	;@ 0x84-0x87 Reserved
+suzReserved4:		.skip 0x04	;@ 0x84-0x87 Reserved
 suzSuzyHRev:		.byte 0		;@ 0x88 Suzy Hardware Revision
 suzSuzySRev:		.byte 0		;@ 0x89 Suzy Software Revision
-suzReserved5:		.space 0x06	;@ 0x8A-0x8F Reserved
+suzReserved5:		.skip 0x06	;@ 0x8A-0x8F Reserved
 suzSuzyBusEn:		.byte 0		;@ 0x90 Suzy Bus Enable
 suzSprGo:			.byte 0		;@ 0x91 Sprite Process Start Bit
 suzSprSys:			.byte 0		;@ 0x92 Sprite System Control
-suzReserved6:		.space 0x1D	;@ 0x93-0xAF Reserved
+suzReserved6:		.skip 0x1D	;@ 0x93-0xAF Reserved
 suzJoystick:		.byte 0		;@ 0xB0 Read Joystick and Switches
 suzSwitches:		.byte 0		;@ 0xB1 Read Other Switches
 suzRCart0:			.byte 0		;@ 0xB2 Read or write 8 bits of data
 suzRCart1:			.byte 0		;@ 0xB3 Read or write 8 bits of data
-suzReserved7:		.space 0x0C	;@ 0xB4-0xBF Reserved
+suzReserved7:		.skip 0x0C	;@ 0xB4-0xBF Reserved
 suzLeds:			.byte 0		;@ 0xC0 Control LEDs
-suzReserved8:		.space 0x01	;@ 0xC1 Reserved
+suzReserved8:		.skip 0x01	;@ 0xC1 Reserved
 suzPPortStat:		.byte 0		;@ 0xC2 Parallel Port Status
 suzPPortData:		.byte 0		;@ 0xC3 Parallel Port Data
 suzHowie:			.byte 0		;@ 0xC4 Read or write as appropriate
@@ -158,6 +158,8 @@ suzSprCtl0_PixelBits:	.byte 0
 everOnScreen:		.byte 0
 suzPadding2:		.skip 3
 
+suzPenIndex:		.space 16	;@
+
 suzLineRepCountTyp:				;@ Unused now
 suzLineType:		.byte 0
 suzLineEverOn:		.byte 0
@@ -165,8 +167,6 @@ suzLineCollValue:	.byte 0	;@
 suzLineRepeatCount:	.byte 0	;@
 
 suzLinePacketBitsLeft:	.long 0	;@
-
-suzPenIndex:		.space 16	;@
 
 mathABCD_sign:
 mathCD_sign:		.short 0
